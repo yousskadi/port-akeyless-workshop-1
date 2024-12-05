@@ -1,0 +1,288 @@
+# We won't use this workflow in this workshop
+name: Deploy Flask Todo App with ArgoCD and Akeyless
+
+on:
+  workflow_dispatch:
+    inputs:
+      app_name:
+        required: true
+        type: string
+        default: "flask-todo"
+      namespace:
+        required: false
+        type: string
+        default: "flask-todo"
+      db_name:
+        required: true
+        type: string
+        default: "todos"
+      akeyless_mysql_secret_name:
+        required: true
+        type: string
+        default: "/demos/mysql_root_password"
+      repo_name:
+        required: true
+        type: string
+        default: "flask-todo-app"
+      port_payload:
+        required: true
+        description: "Port payload for creating a new service in Port"
+        type: string
+
+
+env:
+  AKEYLESS_ACCESS_ID: ${{ secrets.AKEYLESS_ACCESS_ID }}
+  DYNAMIC_SECRET_TTL: "15"
+
+jobs:
+  deploy-flask-todo:
+    runs-on: sam-desktop
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Configure Akeyless CLI and Get Secrets
+        run: |
+          # Get GitHub Actions OIDC token
+          echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN=${{ env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}" >> $GITHUB_ENV
+          echo "ACTIONS_ID_TOKEN_REQUEST_URL=${{ env.ACTIONS_ID_TOKEN_REQUEST_URL }}" >> $GITHUB_ENV
+          
+          # Get JWT token
+          TOKEN=$(curl -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL" | jq -r '.value')
+          
+          # Authenticate with Akeyless using JWT
+          echo "AKEYLESS_TRUSTED_TLS_CERTIFICATE_FILE=./gateway-tls-cert.pem" >> $GITHUB_ENV
+          echo "AKEYLESS_GATEWAY_URL=https://192.168.1.82:8000" >> $GITHUB_ENV
+          export AKEYLESS_TOKEN=$(akeyless auth --access-id ${{ secrets.AKEYLESS_ACCESS_ID }} --access-type jwt --jwt "$TOKEN" --json | jq -r '.token')
+
+          ARGOCD_SERVER=$(akeyless get-secret-value --token $AKEYLESS_TOKEN --name '/demos/argocd/server')
+          echo "ARGOCD_SERVER=$ARGOCD_SERVER" >> "$GITHUB_ENV"
+          
+          ARGOCD_CREDS=$(akeyless get-secret-value --token $AKEYLESS_TOKEN --name '/demos/argocd/user_creds')
+          echo "ARGOCD_USER=$(echo $ARGOCD_CREDS | jq -r '.username')" >> $GITHUB_ENV
+          echo "ARGOCD_PASS=$(echo $ARGOCD_CREDS | jq -r '.password')" >> $GITHUB_ENV
+          
+          PORT_CREDS=$(akeyless get-secret-value --token $AKEYLESS_TOKEN --name '/demos/port/creds')
+          echo "PORT_CLIENT_ID=$(echo $PORT_CREDS | jq -r '.client_id')" >> $GITHUB_ENV
+          echo "PORT_CLIENT_SECRET=$(echo $PORT_CREDS | jq -r '.client_secret')" >> $GITHUB_ENV
+          
+          echo "PERSONAL_ACCESS_TOKEN=$(akeyless get-secret-value --token $AKEYLESS_TOKEN --name '/demos/github/pat')" >> $GITHUB_ENV
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Flask app image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/flask-todo:latest
+
+      - name: Create new repository
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ env.PERSONAL_ACCESS_TOKEN }}
+          script: |
+            // Create the repository
+            await github.rest.repos.createForAuthenticatedUser({
+              name: '${{ github.event.inputs.repo_name }}',
+              private: true
+            });
+
+      - name: Retrieve MySQL root password and create Kubernetes Secret
+        run: |
+          SECRET_JSON=$(akeyless get-secret-value --token $AKEYLESS_TOKEN --name "${{ github.event.inputs.akeyless_mysql_secret_name }}")
+          if ! MYSQL_ROOT_PASSWORD=$(echo "$SECRET_JSON" | jq -r .password); then
+            echo "Failed to parse JSON, using raw secret value"
+            MYSQL_ROOT_PASSWORD="$SECRET_JSON"
+          fi
+          
+          if [ -z "$MYSQL_ROOT_PASSWORD" ]; then
+            echo "Failed to retrieve MySQL root password"
+            exit 1
+          fi
+          
+          echo "MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD" >> $GITHUB_ENV
+          
+          # Create namespace if it doesn't exist
+          kubectl create namespace ${{ github.event.inputs.namespace }} --dry-run=client -o yaml | kubectl apply -f -
+          
+          # Create the secret in the namespace
+          kubectl create secret generic mysql-root-secret \
+            --from-literal=mysql-root-password="$MYSQL_ROOT_PASSWORD" \
+            --namespace=${{ github.event.inputs.namespace }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+        env:
+          AKEYLESS_GATEWAY_URL: 'https://192.168.1.82:8080'
+          AKEYLESS_TRUSTED_TLS_CERTIFICATE_FILE: './gateway_cert.pem'
+
+      - name: Prepare and push manifests
+        run: |
+          git config --global user.email "info@tekanaid.com"
+          git config --global user.name "TeKanAid Automation"
+          
+          # Remove directory if it exists and clone fresh
+          rm -rf ${{ github.event.inputs.repo_name }}
+          
+          # Clone the new repository
+          git clone https://x-access-token:${{ env.PERSONAL_ACCESS_TOKEN }}@github.com/${{ github.repository_owner }}/${{ github.event.inputs.repo_name }}.git
+          cd ${{ github.event.inputs.repo_name }}
+          
+          # Initialize git in the new directory
+          git init
+          git config --local user.email "info@tekanaid.com"
+          git config --local user.name "TeKanAid Automation"
+          git remote set-url origin https://x-access-token:${{ env.PERSONAL_ACCESS_TOKEN }}@github.com/${{ github.repository_owner }}/${{ github.event.inputs.repo_name }}.git
+          
+          # Copy files from parent directory
+          cp -r ../k8s-manifests/* .
+          cp -r ../app/ .
+          cp -r ../tests/ .
+          cp ../Dockerfile .
+          cp ../requirements.txt .
+          cp ../Pipfile .
+          cp ../Pipfile.lock .
+          cp ../run.py .
+          rm -f ../README.md
+          mv ../README-PythonApp.md ../README.md
+          cp ../README.md .
+          
+          # Create GitHub Actions workflow directory
+          mkdir -p .github/workflows
+          cp ../flask-todo-app/.github/workflows/build-and-push.yml .github/workflows/
+          cp ../flask-todo-app/.github/workflows/pr-validation.yml .github/workflows/
+          
+          # Update image reference in deployment
+          sed -i 's#your-docker-registry/flask-app:latest#ghcr.io/${{ github.repository_owner }}/flask-todo:latest#g' flask-deployment.yaml
+          
+          # Replace placeholders
+          sed -i 's/{{APP_NAME}}/${{ github.event.inputs.app_name }}/g' *.yaml
+          sed -i 's/{{NAMESPACE}}/${{ github.event.inputs.namespace }}/g' *.yaml
+          sed -i 's/{{DB_NAME}}/${{ github.event.inputs.db_name }}/g' *.yaml
+          sed -i 's#{{AKEYLESS_MYSQL_SECRET_NAME}}#${{ github.event.inputs.akeyless_mysql_secret_name }}_dynamic#g' *.yaml
+          sed -i 's/{{DYNAMIC_SECRET_TTL}}/${{ env.DYNAMIC_SECRET_TTL }}/g' *.yaml
+          
+          # Commit and push with explicit repository URL
+          git add .
+          git commit -m "Add Flask Todo app and MySQL manifests with Akeyless integration"
+          git push -u origin main
+
+      - name: Create Kubernetes Secret for Gateway Certificate
+        run: |
+          kubectl create secret generic gateway-cert-secret \
+            --from-file=gateway_cert.pem=./gateway_cert.pem \
+            --namespace=${{ github.event.inputs.namespace }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+      
+      - name: Login to Argo CD
+        run: |
+          max_retries=3
+          retry_count=0
+          wait_time=10
+
+          while [ $retry_count -lt $max_retries ]; do
+            if argocd login ${{ env.ARGOCD_SERVER }} --username ${{ env.ARGOCD_USER }} --password ${{ env.ARGOCD_PASS }} --grpc-web --insecure; then
+              echo "Successfully logged into ArgoCD"
+              exit 0
+            else
+              retry_count=$((retry_count+1))
+              if [ $retry_count -lt $max_retries ]; then
+                echo "Failed to login to ArgoCD. Attempt $retry_count of $max_retries. Waiting ${wait_time} seconds before retry..."
+                sleep $wait_time
+                wait_time=$((wait_time * 2))
+              else
+                echo "Failed to login to ArgoCD after $max_retries attempts"
+                exit 1
+              fi
+            fi
+          done
+    
+      - name: Register Repository in Argo CD
+        run: argocd repo add https://github.com/${{ github.repository_owner }}/${{ github.event.inputs.repo_name }}.git --username ${{ github.repository_owner }} --password ${{ env.PERSONAL_ACCESS_TOKEN }}
+
+      - name: Create ArgoCD Application
+        run: |
+          argocd app create ${{ github.event.inputs.app_name }} \
+            --repo https://github.com/${{ github.repository_owner }}/${{ github.event.inputs.repo_name }}.git \
+            --path . \
+            --dest-server https://kubernetes.default.svc \
+            --dest-namespace ${{ github.event.inputs.namespace }} \
+            --project default \
+            --sync-policy automated \
+            --sync-option CreateNamespace=true \
+            --upsert \
+            --grpc-web
+
+      - name: Create Akeyless Target
+        continue-on-error: true
+        run: |
+          # Wait a bit for DNS propagation
+          sleep 20
+          akeyless target create db \
+            --name "${{ github.event.inputs.akeyless_mysql_secret_name }}_target" \
+            --token $AKEYLESS_TOKEN \
+            --db-type mysql \
+            --pwd "$MYSQL_ROOT_PASSWORD" \
+            --host "mysql-${{ github.event.inputs.app_name }}.${{ github.event.inputs.namespace }}.svc.cluster.local" \
+            --port 3306 \
+            --user-name "root" \
+            --db-name "${{ github.event.inputs.db_name }}"
+          if [ $? -ne 0 ]; then
+            echo "Note: Target creation failed because it already exists, but continuing with the workflow."
+          fi
+        env:
+          AKEYLESS_GATEWAY_URL: 'https://192.168.1.82:8080'
+          AKEYLESS_TRUSTED_TLS_CERTIFICATE_FILE: './gateway_cert.pem'
+            
+      - name: Create Akeyless Dynamic Secret
+        continue-on-error: true
+        run: |
+          # Wait a bit for Target to be created
+          sleep 20
+          akeyless dynamic-secret create mysql \
+            --name "${{ github.event.inputs.akeyless_mysql_secret_name }}_dynamic" \
+            --token $AKEYLESS_TOKEN \
+            --target-name "${{ github.event.inputs.akeyless_mysql_secret_name }}_target" \
+            --gateway-url ${{ env.AKEYLESS_GATEWAY_URL }} \
+            --user-ttl "${{ env.DYNAMIC_SECRET_TTL }}s" \
+            --mysql-statements "CREATE USER '{{name}}'@'%' IDENTIFIED WITH mysql_native_password BY '{{password}}' PASSWORD EXPIRE INTERVAL 30 DAY;GRANT ALL PRIVILEGES ON \`${{ github.event.inputs.db_name }}\`.* TO '{{name}}'@'%';" \
+            --mysql-revocation-statements "REVOKE ALL PRIVILEGES, GRANT OPTION FROM '{{name}}'@'%'; DROP USER '{{name}}'@'%';" \
+            --password-length 16
+          if [ $? -ne 0 ]; then
+            echo "Note: Dynamic Secret creation failed because it already exists, but continuing with the workflow."
+          fi
+        env:
+          AKEYLESS_GATEWAY_URL: 'https://192.168.1.82:8080'
+          AKEYLESS_TRUSTED_TLS_CERTIFICATE_FILE: './gateway_cert.pem'
+
+      - name: Trigger ArgoCD sync
+        run: |
+          argocd app sync ${{ github.event.inputs.app_name }}
+
+      - name: Notify Port
+        uses: port-labs/port-github-action@v1
+        with:
+          clientId: ${{ env.PORT_CLIENT_ID }}
+          clientSecret: ${{ env.PORT_CLIENT_SECRET }}
+          operation: PATCH_RUN
+          baseUrl: https://api.getport.io
+          runId: ${{ fromJson(inputs.port_payload).context.runId }}
+          link: https://github.com/${{ github.repository_owner }}/${{ github.event.inputs.repo_name }}
+          status: "SUCCESS"
+          summary: "Created Flask Todo App with Akeyless integration"
+          logMessage: |
+              Created Flask Todo App with Akeyless integration. 
+              Here is your app repo: https://github.com/${{ github.repository_owner }}/${{ github.event.inputs.repo_name }}
+              View the service repo in Port: https://app.getport.io/serviceEntity?identifier=${{ github.event.inputs.repo_name }}
+              Check out your app running in the Port ArgoCD dashboard: https://app.getport.io/argo_cd_dashboard

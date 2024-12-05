@@ -1,0 +1,94 @@
+{
+    "identifier": "scaffold_app",
+    "title": "Scaffold App",
+    "icon": "Apps",
+    "description": "Scaffold an app with a GitHub Repo with files",
+    "trigger": {
+      "type": "self-service",
+      "operation": "CREATE",
+      "userInputs": {
+        "properties": {
+          "project_name": {
+            "icon": "DefaultProperty",
+            "type": "string",
+            "title": "Project Name"
+          },
+          "template": {
+            "icon": "DefaultProperty",
+            "type": "string",
+            "title": "Template",
+            "enum": [
+              "nodejs",
+              "python"
+            ],
+            "enumColors": {
+              "nodejs": "lightGray",
+              "python": "lightGray"
+            }
+          },
+          "description": {
+            "icon": "DefaultProperty",
+            "type": "string",
+            "title": "Description"
+          },
+          "repo_name": {
+            "icon": "DefaultProperty",
+            "type": "string",
+            "title": "Repository Name"
+          }
+        },
+        "required": [
+          "project_name",
+          "repo_name",
+          "template"
+        ],
+        "order": [
+          "project_name",
+          "repo_name",
+          "template",
+          "description"
+        ]
+      },
+      "blueprintIdentifier": "service"
+    },
+    "invocationMethod": {
+      "type": "GITHUB",
+      "org": "your_org_name",
+      "repo": "your_repo_name",
+      "workflow": "scaffold-app.yml",
+      "workflowInputs": {
+        "{{if (.inputs | has(\"project_name\")) then \"project_name\" else null end}}": "{{.inputs.\"project_name\"}}",
+        "{{if (.inputs | has(\"repo_name\")) then \"repo_name\" else null end}}": "{{.inputs.\"repo_name\"}}",
+        "{{if (.inputs | has(\"template\")) then \"template\" else null end}}": "{{.inputs.\"template\"}}",
+        "{{if (.inputs | has(\"description\")) then \"description\" else null end}}": "{{.inputs.\"description\"}}",
+        "port_payload": {
+          "resourceType": "run",
+          "status": "TRIGGERED",
+          "trigger": "{{ .trigger | {by, origin, at} }}",
+          "context": {
+            "entity": "{{.entity.identifier}}",
+            "blueprint": "{{.action.blueprint}}",
+            "runId": "{{.run.id}}"
+          },
+          "payload": {
+            "entity": "{{ (if .entity == {} then null else .entity end) }}",
+            "action": {
+              "invocationMethod": {
+                "type": "GITHUB",
+                "org": "your_org_name",
+                "repo": "your_repo_name",
+                "workflow": "scaffold-app.yml",
+                "omitUserInputs": false,
+                "omitPayload": false,
+                "reportWorkflowStatus": true
+              },
+              "trigger": "{{.trigger.operation}}"
+            },
+            "censoredProperties": "{{.action.encryptedProperties}}"
+          }
+        }
+      },
+      "reportWorkflowStatus": true
+    },
+    "requiredApproval": false
+  }

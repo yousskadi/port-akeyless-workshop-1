@@ -1,0 +1,129 @@
+name: Manage EKS Cluster
+
+on:
+  workflow_dispatch:
+    inputs:
+      cluster_name:
+        description: "Name of the EKS cluster"
+        required: true
+      region:
+        description: "AWS Region for the cluster"
+        required: true
+      action:
+        description: "Action to perform (apply/destroy)"
+        required: true
+        default: "apply"
+      port_payload:
+        required: true
+        description: "Port's payload (who triggered, context, etc...)"
+        type: string
+
+env:
+  AKEYLESS_ACCESS_ID: ${{ secrets.AKEYLESS_ACCESS_ID }}
+  DYNAMIC_SECRET_TTL: "3600"
+jobs:
+  manage_cluster:
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: ./terraform
+
+    if: ${{ github.event.inputs.action == 'apply' || github.event.inputs.action == 'destroy' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Configure Akeyless CLI and Get Secrets
+        run: |
+          # Get GitHub Actions OIDC token
+          echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN=${{ env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}" >> $GITHUB_ENV
+          echo "ACTIONS_ID_TOKEN_REQUEST_URL=${{ env.ACTIONS_ID_TOKEN_REQUEST_URL }}" >> $GITHUB_ENV
+          
+          # Get JWT token
+          TOKEN=$(curl -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL" | jq -r '.value')
+          
+          # Authenticate with Akeyless using JWT --- need to change the gateway URL
+          echo "AKEYLESS_GATEWAY_URL=https://192.168.1.82:8000" >> $GITHUB_ENV
+          export AKEYLESS_TOKEN=$(akeyless auth --access-id ${AKEYLESS_ACCESS_ID} --access-type jwt --jwt "$TOKEN" --json | jq -r '.token')
+        
+          PORT_CREDS=$(akeyless get-secret-value --token $AKEYLESS_TOKEN --name '/demos/port/creds')
+          echo "PORT_CLIENT_ID=$(echo $PORT_CREDS | jq -r '.client_id')" >> $GITHUB_ENV
+          echo "PORT_CLIENT_SECRET=$(echo $PORT_CREDS | jq -r '.client_secret')" >> $GITHUB_ENV
+          
+          # Get AWS dynamic credentials --- need to check below works
+          AWS_CREDS=$(akeyless get-dynamic-secret --token $AKEYLESS_TOKEN --name '/demos/aws/eks-creds' --dynamic-secret-ttl ${DYNAMIC_SECRET_TTL})
+          echo "AWS_ACCESS_KEY_ID=$(echo $AWS_CREDS | jq -r '.access_key_id')" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=$(echo $AWS_CREDS | jq -r '.secret_access_key')" >> $GITHUB_ENV
+
+      - name: Create a log message (apply)
+        if: ${{ github.event.inputs.action == 'apply' }}
+        uses: port-labs/port-github-action@v1
+        with:
+          clientId: ${{ env.PORT_CLIENT_ID }}
+          clientSecret: ${{ env.PORT_CLIENT_SECRET }}
+          baseUrl: https://api.getport.io
+          operation: PATCH_RUN
+          runId: ${{fromJson(inputs.port_payload).context.runId}}
+          logMessage: "Initiating creation of EKS cluster: ${{ inputs.cluster_name }}."
+
+      - name: Generate backend.hcl
+        run: |
+          SUFFIX=${GITHUB_ACTOR}
+          echo "key = \"workshop-port-akeyless-1-${SUFFIX}/terraform.tfstate\"" > backend.hcl
+          echo "Generated suffix: ${SUFFIX}"
+          echo "SUFFIX=${SUFFIX}" >> $GITHUB_ENV  # Export SUFFIX to the environment
+          sleep 30 # Wait for AWS to assign IAM permissions to the credentials
+
+      - name: Terraform Init
+        run: terraform init -backend-config=backend.hcl
+
+      - name: Terraform Format
+        run: terraform fmt
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Apply
+        id: terraform_apply
+        if: ${{ github.event.inputs.action == 'apply' }}
+        run: terraform apply -auto-approve
+        env:
+          TF_VAR_cluster_name: ${{ github.event.inputs.cluster_name }}-${SUFFIX}
+          TF_VAR_region: ${{ github.event.inputs.region }}
+          TF_VAR_port_run_id: ${{ fromJson(inputs.port_payload).context.runId }}
+
+      - name: Terraform Destroy
+        if: ${{ github.event.inputs.action == 'destroy' }}
+        run: terraform destroy -auto-approve
+        env:
+          TF_VAR_cluster_name: ${{ github.event.inputs.cluster_name }}-${SUFFIX}
+          TF_VAR_region: ${{ github.event.inputs.region }}
+          TF_VAR_port_run_id: ${{ fromJson(inputs.port_payload).context.runId }}
+
+      - name: Create a log message (post-action)
+        uses: port-labs/port-github-action@v1
+        if: ${{ github.event.inputs.action == 'apply' }}
+        with:
+          clientId: ${{ env.PORT_CLIENT_ID }}
+          clientSecret: ${{ env.PORT_CLIENT_SECRET }}
+          baseUrl: https://api.getport.io
+          operation: PATCH_RUN
+          runId: ${{fromJson(inputs.port_payload).context.runId}}
+          logMessage: 'EKS cluster creation has been completed and here is its name: ${{ github.event.inputs.cluster_name }}.'
+
+      - name: Create a log message (post-action)
+        uses: port-labs/port-github-action@v1
+        if: ${{ github.event.inputs.action == 'destroy' }}
+        with:
+          clientId: ${{ env.PORT_CLIENT_ID }}
+          clientSecret: ${{ env.PORT_CLIENT_SECRET }}
+          baseUrl: https://api.getport.io
+          operation: PATCH_RUN
+          runId: ${{fromJson(inputs.port_payload).context.runId}}
+          logMessage: 'EKS cluster destruction has been completed for this cluster name: ${{ github.event.inputs.cluster_name }}.'

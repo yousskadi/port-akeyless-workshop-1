@@ -1,0 +1,74 @@
+{
+  "identifier": "eks_delete_eks_cluster",
+  "title": "Delete an EKS cluster",
+  "icon": "AmazonEKS",
+  "description": "An action that deletes an eks cluster",
+  "trigger": {
+    "type": "self-service",
+    "operation": "DELETE",
+    "userInputs": {
+      "properties": {
+        "region": {
+          "icon": "DefaultProperty",
+          "title": "Region",
+          "type": "string",
+          "blueprint": "region",
+          "format": "entity"
+        }
+      },
+      "required": [
+        "region"
+      ],
+      "order": [
+        "region"
+      ]
+    },
+    "blueprintIdentifier": "eks"
+  },
+  "invocationMethod": {
+    "type": "GITHUB",
+    "org": "your_org_name",
+    "repo": "your_repo_name",
+    "workflow": "manage-eks-cluster.yml",
+    "workflowInputs": {
+      "{{if (.inputs | has(\"ref\")) then \"ref\" else null end}}": "{{.inputs.\"ref\"}}",
+      "cluster_name": "{{.entity.properties.name}}",
+      "action": "destroy",
+      "{{if (.inputs | has(\"region\")) then \"region\" else null end}}": "{{.inputs.\"region\" | if type == \"array\" then map(.identifier) else .identifier end}}",
+      "port_payload": {
+        "action": "{{ .action.identifier[(\"eks_\" | length):] }}",
+        "resourceType": "run",
+        "status": "TRIGGERED",
+        "trigger": "{{ .trigger | {by, origin, at} }}",
+        "context": {
+          "entity": "{{.entity.identifier}}",
+          "blueprint": "{{.action.blueprint}}",
+          "runId": "{{.run.id}}"
+        },
+        "payload": {
+          "entity": "{{ (if .entity == {} then null else .entity end) }}",
+          "action": {
+            "invocationMethod": {
+              "type": "GITHUB",
+              "org": "your_org_name",
+              "repo": "your_repo_name",
+              "workflow": "manage-eks-cluster.yml",
+              "omitUserInputs": false,
+              "omitPayload": false,
+              "reportWorkflowStatus": true
+            },
+            "trigger": "{{.trigger.operation}}"
+          },
+          "properties": {
+            "{{if (.inputs | has(\"cluster_name\")) then \"cluster_name\" else null end}}": "{{.inputs.\"cluster_name\"}}",
+            "{{if (.inputs | has(\"region\")) then \"region\" else null end}}": "{{.inputs.\"region\" | if type == \"array\" then map(.identifier) else .identifier end}}"
+          },
+          "censoredProperties": "{{.action.encryptedProperties}}"
+        }
+      }
+    },
+    "reportWorkflowStatus": true
+  },
+  "requiredApproval": false,
+  "publish": true
+}

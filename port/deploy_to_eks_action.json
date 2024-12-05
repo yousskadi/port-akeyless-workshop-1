@@ -1,0 +1,72 @@
+{
+    "identifier": "eks_deploy_to_eks",
+    "title": "Deploy to EKS",
+    "description": "Build and deploy an image to EKS",
+    "trigger": {
+        "type": "self-service",
+        "operation": "DAY-2",
+        "userInputs": {
+            "properties": {
+                "repo_url": {
+                    "icon": "DefaultProperty",
+                    "title": "Repo for Scaffolded App",
+                    "description": "The Repo of the app you want to deploy on EKS",
+                    "type": "string",
+                    "blueprint": "service",
+                    "format": "entity"
+                }
+            },
+            "required": [
+                "repo_url"
+            ],
+            "order": [
+                "repo_url"
+            ]
+        },
+        "blueprintIdentifier": "eks"
+    },
+    "invocationMethod": {
+        "type": "GITHUB",
+        "org": "your_org_name",
+        "repo": "your_repo_name",
+        "workflow": "build-and-deploy.yml",
+        "workflowInputs": {
+            "{{if (.inputs | has(\"ref\")) then \"ref\" else null end}}": "{{.inputs.\"ref\"}}",
+            "cluster": "{{.entity.identifier}}",
+            "{{if (.inputs | has(\"repo_url\")) then \"repo_url\" else null end}}": "{{.inputs.\"repo_url\" | if type == \"array\" then map(.properties.url) else .properties.url end}}",
+            "port_payload": {
+                "action": "{{ .action.identifier[(\"eks_\" | length):] }}",
+                "resourceType": "run",
+                "status": "TRIGGERED",
+                "trigger": "{{ .trigger | {by, origin, at} }}",
+                "context": {
+                    "entity": "{{.entity.identifier}}",
+                    "blueprint": "{{.action.blueprint}}",
+                    "runId": "{{.run.id}}"
+                },
+                "payload": {
+                    "entity": "{{ (if .entity == {} then null else .entity end) }}",
+                    "action": {
+                        "invocationMethod": {
+                            "type": "GITHUB",
+                            "org": "your_org_name",
+                            "repo": "your_repo_name",
+                            "workflow": "build-and-deploy.yml",
+                            "omitUserInputs": false,
+                            "omitPayload": false,
+                            "reportWorkflowStatus": true
+                        },
+                        "trigger": "{{.trigger.operation}}"
+                    },
+                    "properties": {
+                        "{{if (.inputs | has(\"cluster\")) then \"cluster\" else null end}}": "{{.inputs.\"cluster\" | if type == \"array\" then map(.identifier) else .identifier end}}"
+                    },
+                    "censoredProperties": "{{.action.encryptedProperties}}"
+                }
+            }
+        },
+        "reportWorkflowStatus": true
+    },
+    "requiredApproval": false,
+    "publish": true
+}

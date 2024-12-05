@@ -1,0 +1,195 @@
+name: Scaffold Node.js App
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_name:
+        description: "Name of the app"
+        required: true
+      repo_name:
+        description: "Slug of the app"
+        required: true
+      template:
+        description: "Template to use for the app"
+        required: false
+        default: "nodejs"
+      description:
+        description: "Description of the app"
+        required: true
+        default: "A simple app"
+      port_payload:
+        required: true
+        description: "Port's payload (who triggered, context, etc...)"
+        type: string
+
+jobs:
+  scaffold_app:
+    runs-on: ubuntu-latest
+
+    env:
+      AKEYLESS_ACCESS_ID: ${{ secrets.AKEYLESS_ACCESS_ID }}
+      AWS_REGION: us-east-1
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure Akeyless CLI and Get Secrets
+        run: |
+          # Get GitHub Actions OIDC token
+          echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN=${{ env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}" >> $GITHUB_ENV
+          echo "ACTIONS_ID_TOKEN_REQUEST_URL=${{ env.ACTIONS_ID_TOKEN_REQUEST_URL }}" >> $GITHUB_ENV
+          
+          # Get JWT token
+          TOKEN=$(curl -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL" | jq -r '.value')
+          
+          # Authenticate with Akeyless using JWT --- need to change the gateway URL
+          echo "AKEYLESS_GATEWAY_URL=https://192.168.1.82:8000" >> $GITHUB_ENV
+          export AKEYLESS_TOKEN=$(akeyless auth --access-id ${AKEYLESS_ACCESS_ID} --access-type jwt --jwt "$TOKEN" --json | jq -r '.token')
+        
+          PORT_CREDS=$(akeyless get-secret-value --token $AKEYLESS_TOKEN --name '/demos/port/creds')
+          echo "PORT_CLIENT_ID=$(echo $PORT_CREDS | jq -r '.client_id')" >> $GITHUB_ENV
+          echo "PORT_CLIENT_SECRET=$(echo $PORT_CREDS | jq -r '.client_secret')" >> $GITHUB_ENV
+          
+          # Get AWS dynamic credentials --- need to check below works
+          AWS_CREDS=$(akeyless get-dynamic-secret --token $AKEYLESS_TOKEN --name '/demos/aws/eks-creds' --dynamic-secret-ttl ${DYNAMIC_SECRET_TTL})
+          echo "AWS_ACCESS_KEY_ID=$(echo $AWS_CREDS | jq -r '.access_key_id')" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=$(echo $AWS_CREDS | jq -r '.secret_access_key')" >> $GITHUB_ENV
+
+          # Get GitHub PAT
+          echo "PERSONAL_ACCESS_TOKEN=$(akeyless get-secret-value --token $AKEYLESS_TOKEN --name '/demos/github/pat')" >> $GITHUB_ENV
+
+      - name: Create a log message (post-action)
+        uses: port-labs/port-github-action@v1
+        with:
+          clientId: ${{ env.PORT_CLIENT_ID }}
+          clientSecret: ${{ env.PORT_CLIENT_SECRET }}
+          baseUrl: https://api.getport.io
+          operation: PATCH_RUN
+          runId: ${{fromJson(inputs.port_payload).context.runId}}
+          logMessage: "Starting scaffolding of app: ${{ github.event.inputs.project_name }}"
+
+      - name: Check if Repository Exists
+        id: check_repo
+        run: |
+          REPO_EXISTS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X GET \
+            -H "Authorization: Bearer ${{ env.PERSONAL_ACCESS_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository_owner }}/${{ github.event.inputs.repo_name }}")
+           
+          echo "HTTP Status: $REPO_EXISTS"
+
+          if [ $REPO_EXISTS -eq 200 ]; then
+            echo "Repository already exists."
+            echo "repo_exists=true" >> $GITHUB_ENV
+          else
+            echo "Repository does not exist."
+            echo "repo_exists=false" >> $GITHUB_ENV
+          fi
+
+      - name: Create a log message (post-action)
+        uses: port-labs/port-github-action@v1
+        with:
+          clientId: ${{ env.PORT_CLIENT_ID }}
+          clientSecret: ${{ env.PORT_CLIENT_SECRET }}
+          baseUrl: https://api.getport.io
+          operation: PATCH_RUN
+          runId: ${{fromJson(inputs.port_payload).context.runId}}
+          logMessage: "Creating ECR repository: ${{ github.event.inputs.repo_name }}"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Login to AWS ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Create ECR Repository
+        id: create-ecr-repo
+        run: |
+          repositoryUri=$(aws ecr create-repository --repository-name "${{ github.event.inputs.repo_name }}" --output json | jq -r '.repository.repositoryUri')
+          echo "ECR_REPOSITORY_URI=$repositoryUri" >> $GITHUB_ENV
+
+      - name: Run Cookiecutter
+        id: cookiecutter
+        uses: andrewthetechie/gha-cookiecutter@main
+        with:
+          # path to what you checked out
+          template: ./app-templates/${{ github.event.inputs.template }}
+          outputDir: ./tmp
+          cookiecutterValues: '{
+            "project_name": "${{ github.event.inputs.project_name }}",
+            "directory_name": "${{ github.event.inputs.repo_name }}",
+            "description": "${{ github.event.inputs.description }}",
+            "author_name": "Port",
+            "github_username": "${{ github.repository_owner }}",
+            "image_repository": "${{ env.ECR_REPOSITORY_URI }}"
+            }'
+
+      - name: Create a log message (post-action)
+        uses: port-labs/port-github-action@v1
+        with:
+          clientId: ${{ env.PORT_CLIENT_ID }}
+          clientSecret: ${{ env.PORT_CLIENT_SECRET }}
+          baseUrl: https://api.getport.io
+          operation: PATCH_RUN
+          runId: ${{fromJson(inputs.port_payload).context.runId}}
+          logMessage: "Creating repository for app: ${{ github.event.inputs.project_name }}"
+
+      - name: Create GitHub Repository
+        id: create-repo
+        if: ${{ env.repo_exists == 'false' }}
+        run: |
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ env.PERSONAL_ACCESS_TOKEN }}" \
+            -d '{"name": "${{ github.event.inputs.repo_name }}", "private": true, "description": "${{ github.event.inputs.description }}"}' \
+            "https://api.github.com/user/repos")
+
+          echo "HTTP Status: $HTTP_STATUS"
+
+          if [ $HTTP_STATUS -eq 201 ]; then
+            echo "Repository created successfully."
+          else
+            echo "Failed to create repository. HTTP Status: $HTTP_STATUS"
+            exit 1
+          fi
+
+      - name: Create a log message (post-action)
+        uses: port-labs/port-github-action@v1
+        with:
+          clientId: ${{ env.PORT_CLIENT_ID }}
+          clientSecret: ${{ env.PORT_CLIENT_SECRET }}
+          baseUrl: https://api.getport.io
+          operation: PATCH_RUN
+          runId: ${{fromJson(inputs.port_payload).context.runId}}
+          logMessage: "Commiting new app files: ${{ github.event.inputs.project_name }}"
+
+      - name: Commit files
+        working-directory: ./tmp/${{ github.event.inputs.repo_name }}
+        run: |
+          sudo chmod -R 777 .
+          git init
+          git config user.name "GitHub Actions Bot"
+          git config user.email "<>"
+          git add .
+          git commit -m "Initial commit"
+          git branch -M main
+          git remote add origin https://${{ github.repository_owner }}:${{ env.PERSONAL_ACCESS_TOKEN }}@github.com/${{ github.repository_owner }}/${{ github.event.inputs.repo_name }}.git
+          git push -u origin main
+
+      - name: Create a log message (post-action)
+        uses: port-labs/port-github-action@v1
+        with:
+          clientId: ${{ env.PORT_CLIENT_ID }}
+          clientSecret: ${{ env.PORT_CLIENT_SECRET }}
+          baseUrl: https://api.getport.io
+          operation: PATCH_RUN
+          status: "SUCCESS"
+          runId: ${{fromJson(inputs.port_payload).context.runId}}
+          logMessage: "Finished scaffolding of app: ${{ github.event.inputs.project_name }}"
