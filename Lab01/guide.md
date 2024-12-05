@@ -9,6 +9,8 @@
   - [1. Fork GitHub Repo](#1-fork-github-repo)
   - [2. Start a Codespace](#2-start-a-codespace)
   - [3. Get AWS Access](#3-get-aws-access)
+  - [4. Run minikube](#4-run-minikube)
+  - [5. Run a keep alive for the codespace](#5-run-a-keep-alive-for-the-codespace)
 
 <!-- /code_chunk_output -->
 
@@ -64,5 +66,31 @@ https://047709130171.signin.aws.amazon.com/console/
 ```
 
 your IAM user name is the same as the "user" above and your Password is the "password" above.
+
+## 4. Run minikube
+
+```bash
+minikube start --cpus 3 --memory 8g
+```
+Wait for minikube to be ready. Then run the follwing command to check nodes:
+
+```bash
+kubectl get nodes
+```
+
+You should see something like this:
+
+```
+NAME       STATUS   ROLES           AGE   VERSION
+minikube   Ready    control-plane   12s   v1.31.0
+```
+
+## 5. Run a keep alive for the codespace
+
+In a new terminal, run the following command to keep the codespace alive.
+
+```bash
+while true; do date; sleep 60; done
+```
 
 > You've reached the end of the lab.
