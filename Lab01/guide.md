@@ -33,6 +33,7 @@ If you are working on this workshop live then ask your instructor to provide the
 Add these credentials in the `start.sh` script at the top then run the script:
 
 ```bash
+cd Lab01
 ./start.sh
 ```
 

@@ -14,10 +14,6 @@ In this lab we will get our pipeline ready and make sure we have the Akeyless pl
   - [4. Associate the Authentication Method with an Access Role](#4-associate-the-authentication-method-with-an-access-role)
   - [5. Set Read permissions for our AWS Dynamic Secret for the Access Role](#5-set-read-permissions-for-our-aws-dynamic-secret-for-the-access-role)
   - [6. Enable Workflows in your Repo](#6-enable-workflows-in-your-repo)
-  - [7. Run the GitHub Actions Workflow](#7-run-the-github-actions-workflow)
-  - [8. Check the AWS Console \[Optional\]](#8-check-the-aws-console-optional)
-  - [9. Access the Cluster](#9-access-the-cluster)
-    - [Congratulations on building your EKS cluster with Terraform and Akeyless!](#congratulations-on-building-your-eks-cluster-with-terraform-and-akeyless)
 
 <!-- /code_chunk_output -->
 
@@ -83,77 +79,5 @@ akeyless set-role-rule --role-name GitHubRoleWorkshop \
 Since you've forked this repo, you need to enable the GitHub Actions workflows. Go to the Actions tab and click the button `I understand my workflows, go ahead and enable them`.
 
 ![alt text](../images/enable_workflows.png)
-
-
-## 7. Run the GitHub Actions Workflow
-
-Go to the Actions tab, select the `Manage EKS Cluster` workflow and click the drop down button `Run workflow`, make sure the `action` selected is `apply` and then click the button `Run workflow`.
-
-![alt text](../images/run_workflow.png)
-
-## 8. Check the AWS Console [Optional]
-
-If you wish, you could log into the AWS console and see your EKS cluster there. Below is a snapshot of what you would see.
-
-![alt text](../images/cluster_created.png)
-
-## 9. Access the Cluster
-
-To get the kubeconfig for the cluster, run the command below replacing <your-eks-cluster-name> with your eks cluster name which will show up in the output of terraform or you can see in the AWS console.
-
-```bash
-aws eks update-kubeconfig --region us-east-1 --name <your-eks-cluster-name>
-```
-
-> Note: If after you run the pipeline and find that you get an error accessing the cluster, it could be that you need to refresh the AWS credentials you're using, that is if you are using the ones provided by TeKanAid Academy. You can refresh them by running the command: `/.start.sh` again.
-
-You can now use `kubectl` to access the cluster.
-
-Below are some suggested commands for you to run.
-
-```bash
-@tekanaid ➜ /workspaces/akeyless-workshop-1/terraform (main) $ kubens
-default
-kube-node-lease
-kube-public
-kube-system
-@tekanaid ➜ /workspaces/akeyless-workshop-1/terraform (main) $ kubens kube-system
-Context "arn:aws:eks:us-east-1:047709130171:cluster/workshop-1-AYEsefOJ" modified.
-Active namespace is "kube-system".
-@tekanaid ➜ /workspaces/akeyless-workshop-1/terraform (main) $ kga
-NAME                                      READY   STATUS    RESTARTS   AGE
-pod/aws-node-p9sc2                        2/2     Running   0          21m
-pod/aws-node-pd6f6                        2/2     Running   0          21m
-pod/aws-node-tltng                        2/2     Running   0          21m
-pod/coredns-54d6f577c6-s6xfm              1/1     Running   0          44m
-pod/coredns-54d6f577c6-x29rp              1/1     Running   0          44m
-pod/ebs-csi-controller-7bb6f55486-25kx2   6/6     Running   0          22m
-pod/ebs-csi-controller-7bb6f55486-g85fd   6/6     Running   0          22m
-pod/ebs-csi-node-942jx                    3/3     Running   0          21m
-pod/ebs-csi-node-vlvf6                    3/3     Running   0          21m
-pod/ebs-csi-node-wsqlk                    3/3     Running   0          21m
-pod/kube-proxy-brcvz                      1/1     Running   0          21m
-pod/kube-proxy-qtdn5                      1/1     Running   0          21m
-pod/kube-proxy-twhjb                      1/1     Running   0          21m
-
-NAME               TYPE        CLUSTER-IP    EXTERNAL-IP   PORT(S)                  AGE
-service/kube-dns   ClusterIP   172.20.0.10   <none>        53/UDP,53/TCP,9153/TCP   44m
-
-NAME                                  DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR              AGE
-daemonset.apps/aws-node               3         3         3       3            3           <none>                     44m
-daemonset.apps/ebs-csi-node           3         3         3       3            3           kubernetes.io/os=linux     22m
-daemonset.apps/ebs-csi-node-windows   0         0         0       0            0           kubernetes.io/os=windows   22m
-daemonset.apps/kube-proxy             3         3         3       3            3           <none>                     44m
-
-NAME                                 READY   UP-TO-DATE   AVAILABLE   AGE
-deployment.apps/coredns              2/2     2            2           44m
-deployment.apps/ebs-csi-controller   2/2     2            2           22m
-
-NAME                                            DESIRED   CURRENT   READY   AGE
-replicaset.apps/coredns-54d6f577c6              2         2         2       44m
-replicaset.apps/ebs-csi-controller-7bb6f55486   2         2         2       22m
-```
-
-### Congratulations on building your EKS cluster with Terraform and Akeyless!
 
 > You've reached the end of the lab.

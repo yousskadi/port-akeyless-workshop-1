@@ -4,7 +4,7 @@ set -e
 REPO_URL=$(git config --get remote.origin.url)
 REPO_NAME=$(echo $REPO_URL | grep -o 'github.com[:/][^.]*' | sed 's#github.com[:/]##')
 GITHUB_USERNAME=$(echo $REPO_NAME | cut -d'/' -f1)
-AUTH_METHOD_NAME="/Workshops/Workshop2/$GITHUB_USERNAME/APIkey"
+AUTH_METHOD_NAME="/Workshops/Akeyless-Port-1/$GITHUB_USERNAME/APIkey"
 
 echo "Please enter your oidc token:"
 read oidc_token
@@ -38,11 +38,11 @@ echo "You will need these API key credentials when authenticating into the gatew
 # Check if role association exists
 echo "Checking role association..."
 ROLE_ASSOC_EXISTS=$(akeyless auth-method list --token "$token" | \
-    jq -r ".auth_methods[] | select(.auth_method_name == \"$AUTH_METHOD_NAME\") | .auth_method_roles_assoc[]? | select(.role_name == \"/Workshops/Workshop2\") | .role_name")
+    jq -r ".auth_methods[] | select(.auth_method_name == \"$AUTH_METHOD_NAME\") | .auth_method_roles_assoc[]? | select(.role_name == \"/Workshops/Akeyless-Port-1\") | .role_name")
 
 if [ -z "$ROLE_ASSOC_EXISTS" ]; then
     echo "Attempting to associate API key with access role..."
-    if ! akeyless assoc-role-am --am-name "$AUTH_METHOD_NAME" --role-name "/Workshops/Workshop2" --token "$token" 2>&1 | grep -q "Status 409 Conflict"; then
+    if ! akeyless assoc-role-am --am-name "$AUTH_METHOD_NAME" --role-name "/Workshops/Akeyless-Port-1" --token "$token" 2>&1 | grep -q "Status 409 Conflict"; then
         echo "Role association created"
     else
         echo "Role association already exists"

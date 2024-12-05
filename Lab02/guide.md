@@ -1,40 +1,107 @@
 # Akeyless Setup
 
+This lab will help you set up Akeyless in your minikube Kubernetes cluster and create a gateway.
+
+Key Objectives:
+- Access Akeyless via OIDC
+- Create an API Key and associate it with an Access Role
+- Create a Gateway in Akeyless
+- Give permissions to access the Gateway
+- Check the Gateway from the Akeyless Console 
+
+Table of Contents:
+
 - [Akeyless Setup](#akeyless-setup)
-  - [1. Create an Akeyless Account](#1-create-an-akeyless-account)
-    - [1.1 Create an API Key](#11-create-an-api-key)
-    - [1.2 Associate the Auth Method with an Access Role](#12-associate-the-auth-method-with-an-access-role)
+  - [1. Access Akeyless via OIDC](#1-access-akeyless-via-oidc)
+    - [1.1 Login to Akeyless UI via OIDC](#11-login-to-akeyless-ui-via-oidc)
+    - [1.2 Login to Akeyless CLI via OIDC](#12-login-to-akeyless-cli-via-oidc)
+    - [1.3 Run a script to create an API Key and associate it with an Access Role](#13-run-a-script-to-create-an-api-key-and-associate-it-with-an-access-role)
   - [2. Create a Gateway in Akeyless](#2-create-a-gateway-in-akeyless)
     - [2.1 Create the Gateway](#21-create-the-gateway)
-    - [2.2 Expose the Gateway Port 8000](#22-expose-the-gateway-port-8000)
+    - [2.2 Expose the Gateway Port 8000 and 8081](#22-expose-the-gateway-port-8000-and-8081)
     - [2.3 Give Permission](#23-give-permission)
     - [2.4 Check the Gateway from the Akeyless Console](#24-check-the-gateway-from-the-akeyless-console)
-  - [3. Log into the Akeyless CLI](#3-log-into-the-akeyless-cli)
-    - [Update the Default Akeyless Profile](#update-the-default-akeyless-profile)
-    - [3.1 Test the Credentials with the CLI](#31-test-the-credentials-with-the-cli)
-  - [4. Create a Target in Akeyless](#4-create-a-target-in-akeyless)
-  - [5. Create a Rotated Secret for the Target](#5-create-a-rotated-secret-for-the-target)
-  - [6. Create an AWS Dynamic Secret](#6-create-an-aws-dynamic-secret)
+  - [3. Create a Target in Akeyless](#3-create-a-target-in-akeyless)
+  - [4. Create a Rotated Secret for the Target](#4-create-a-rotated-secret-for-the-target)
+  - [5. Create an AWS Dynamic Secret](#5-create-an-aws-dynamic-secret)
 
 
-## 1. Create an Akeyless Account
+## 1. Access Akeyless via OIDC
 
-By going to https://akeyless.io and clicking on the Start Free button.
+### 1.1 Login to Akeyless UI via OIDC
 
-### 1.1 Create an API Key
+Go to https://console.akeyless.io and click on `OIDC` and NOT `GitHub` under the `Sign in` button, then enter this `OIDC Access ID` ***`p-j1ej0z1eudthim`*** then click `Sign in`. This will redirect you to GitHub to login. You will need to approve the access.
 
-In the Akeyless Console, go to the `Users & Auth Methods` and click the New button. Select the `API Key` Authentication method and give it the name `AdminAPI` then click `Finish`. Make sure to save these credentials.
+![alt text](../images/login-oidc.png)
 
-![alt text](../images/create_api_key.png)
+### 1.2 Login to Akeyless CLI via OIDC
 
-![alt text](../images/create_api_key_auth.png)
+```bash
+akeyless --init
+akeyless auth --access-id=p-j1ej0z1eudthim --access-type=oidc --use-remote-browser
+```
 
-Now save the `Access ID` and `Access Key` to be used later.
+You may get a prompt saying:
+```
+AKEYLESS-CLI, first use detected
+For more info please visit: https://docs.akeyless.io/docs/cli
+Enter Akeyless URL (Default: vault.akeyless.io)
+```
 
-### 1.2 Associate the Auth Method with an Access Role
+Just press `Enter` to use the default URL.
 
-Click on the `Access Role` tab and click on `admin` and then click on the `Associate` button and slelect the `/AdminAPI` Auth method. This way we are giving this Auth Method full admin capabilities.
-![alt text](../images/access_role_for_auth_method_api_key.png)
+Then you will get a prompt saying:
+```
+Would you like to configure a profile? (Y/n)
+```
+
+Click `n` to not configure a profile.
+
+Finally, you will get a prompt saying:
+
+```
+Would you like to move 'akeyless' binary to: /home/codespace/.akeyless/bin/akeyless? (Y/n)
+```
+
+Click `n` to not move the binary.
+
+Then you can re-run the command:
+
+```bash
+akeyless auth --access-id=p-j1ej0z1eudthim --access-type=oidc --use-remote-browser
+```
+
+You will get an output that says:
+
+```
+Open the link below in your browser in order to complete the authentication:
+Link: https://auth.akeyless.io/oidc-login?access_id=p-j1ej0z1eudthim&redirect_uri=https://auth-relay.akeyless.io/creds-login&is_short_token=true
+```
+
+Click on the link above and login with your GitHub account.
+
+Then you will get a screen that says the following:
+
+![alt text](../images/oidc-auth-success.jpg)
+
+Click on the `Show Token` button and copy the token and save it somewhere to be used in the next step.
+
+![alt text](../images/copy-oidc-token.jpg)
+
+### 1.3 Run a script to create an API Key and associate it with an Access Role
+```bash
+Lab03/create_api_key.sh
+```
+
+This script does the following:
+
+1. Gets your GitHub username from the git remote URL
+2. Prompts you for your OIDC token and saves it to a file
+3. Creates an API key auth method under `/Workshops/Akeyless-Port-1/<your-github-username>/APIkey` if it doesn't exist, or resets the existing one
+4. Saves the API key credentials (name, access ID, and access key) to `creds_api_key_auth.json`
+5. Associates the API key with the `/Workshops/Akeyless-Port-1` access role if not already associated
+
+The generated API key credentials will be used later for authentication with the Akeyless gateway.
 
 ## 2. Create a Gateway in Akeyless
 
@@ -43,19 +110,38 @@ Click on the `Access Role` tab and click on `admin` and then click on the `Assoc
 Run the following commands in the `Terminal` of your GitHub codespace.
 
 ```bash
-docker run -d -p 8000:8000 -p 8200:8200 -p 18888:18888 -p 8080:8080 -p 8081:8081 -p 5696:5696 --name akeyless-gw akeyless/base
+helm repo add akeyless https://akeylesslabs.github.io/helm-charts
+helm repo update
+kubectl create namespace akeyless
+helm upgrade --install gw akeyless/akeyless-api-gateway --namespace akeyless --set akeylessUserAuth.adminAccessId=$(jq -r .access_id creds_api_key_auth.json)
+kubens akeyless
 ```
 
-Check that the gateway is up and running
+Check the gateway logs and wait until they stop:
 
 ```bash
-docker logs -f akeyless-gw
+watch kubectl get pods -n akeyless
+```
+Sample Output:
+```
+NAME                                       READY   STATUS    RESTARTS   AGE
+gw-akeyless-api-gateway-6fdbbbfbb6-fmgzd   1/1     Running   0          9m37s
+gw-akeyless-api-gateway-6fdbbbfbb6-gl4n5   1/1     Running   0          9m37s
 ```
 
-### 2.2 Expose the Gateway Port 8000
+Hit `Ctrl+C` to stop
 
-Click on the `PORTS` tab beside the `TERMINAL` tab and right click on port `8000` and change the `Port Visibility` to `Public`.
+### 2.2 Expose the Gateway Port 8000 and 8081
+
+First, open a new terminal in your codespace and run the following command:
+```bash
+kubectl port-forward svc/gw-akeyless-api-gateway 8000:8000 -n akeyless
+```
+
+Then, in the codespace, click on the `PORTS` tab beside the `TERMINAL` tab and right click on port `8000` and change the `Port Visibility` to `Public`.
 ![alt text](../images/port_visibility_public.png)
+
+> Do the same for port 8081
 
 ### 2.3 Give Permission
 
@@ -66,23 +152,23 @@ Approve the access to this port.
 
 ![alt text](../images/approve_port_access.png)
 
-Login using the `Password` option 
+Login using your API key credentials found in the `creds_api_key_auth.json` file in Lab03.
 
-![alt text](../images/change_to_password_for_gw.png)
-
-Use the same password you used to log into the Akeyless Console.
+![alt text](../images/gwy-sign-in.png)
 
 ![alt text](../images/gwy_view.png)
 
 Click on `Access Permissions` then on the `New` button.
 
-Give it a name `AdminAPI` and choose the `/AdminAPI` Auth method then click `Next.` Leave `Admin` selected and then click `Finish`.
+Give it a name `APIkey` and choose the `/Workshops/Akeyless-Port-1/<your-github-username>/APIkey` Auth method then click `Next.` Leave `Admin` selected and then click `Finish`.
 
-![alt text](../images/gateway_access_permission.png)
+![alt text](../images/gwy-access-permissions.png)
 
-Add another permission for the `/admin` authentication method:
+Add another permission for the OIDC auth method: `/Workshops/TeKanAid Academy GitHub`
 
-![alt text](../images/more_admin_permissions_for_gateway.png)
+![alt text](../images/gwy-oidc-permissions.png)
+
+then click `Next.` Leave `Admin` selected and then click `Finish`.
 
 ### 2.4 Check the Gateway from the Akeyless Console
 
@@ -90,49 +176,10 @@ Now refresh the Akeyless Console browser and click on the `Gateway` tab to see y
 
 ![alt text](../images/console_view_with_gwy.png)
 
-## 3. Log into the Akeyless CLI
 
-### Update the Default Akeyless Profile
+######---- This below is a good candidate for a script
 
-Fill in the API Key values obtained from step 1.1 below and run the commands:
-
-```bash
-export AKEYLESS_ACCESS_ID=xxx
-export AKEYLESS_ACCESS_KEY=xxx
-akeyless configure --profile default --access-id ${AKEYLESS_ACCESS_ID} --access-key ${AKEYLESS_ACCESS_KEY}
-```
-
-### 3.1 Test the Credentials with the CLI
-
-Run the following command to test the CLI access to Akeyless
-
-```bash
-akeyless list-gateways
-```
-
-Sample output:
-```json
-{
-  "clusters": [
-    {
-      "id": 50053,
-      "cluster_name": "acc-me6ozktdv0Tm/p-4vou9psc6dyxem/defaultCluster",
-      "cluster_url": "https://curly-halibut-vg5g75v9jj4h4gw-8000.app.github.dev",
-      "status": "Running",
-      "status_description": "",
-      "display_name": "",
-      "allowed": false,
-      "default_protection_key_id": 0,
-      "default_secret_location": "",
-      "allowed_access_ids": [
-        "p-4vou9psc6dyxem"
-      ]
-    }
-  ]
-}
-```
-
-## 4. Create a Target in Akeyless
+## 3. Create a Target in Akeyless
 
 You will need the AWS credentials you received in the beginning to create a target in Akeyless. You can find them by running:
 
@@ -153,7 +200,7 @@ akeyless create-aws-target --name AWS --access-key-id AKIAQWXXXXXX --access-key 
 Go to the Akeyless Console and check the newly created Target that we will use to create an AWS dynamic secret. Go to the `Targets` tab.
 ![alt text](../images/targets.png)
 
-## 5. Create a Rotated Secret for the Target
+## 4. Create a Rotated Secret for the Target
 
 Since we always say not to have any long-lived credentials. Let's create a rotated secret that will rotate our Target's AWS credentials automatically every 30 days.
 
@@ -177,7 +224,7 @@ You could also manually rotate the credentials as shown below.
 
 ![alt text](../images/manual-rotate-target-creds.png)
 
-## 6. Create an AWS Dynamic Secret
+## 5. Create an AWS Dynamic Secret
 
 Now it's time to create our AWS Dynamic Secret. You will need to update the command below with your `gateway-url`. You can find it by going into your Akeyless Console and click on `Gateways` and it's under `Gateway URL (Configuration):`
 
@@ -208,6 +255,5 @@ Now test this by fetching a dynamic AWS secret value using this command:
 ```bash
 akeyless dynamic-secret get-value --name /Terraform/terraform-credentials
 ```
-
 
 > You've reached the end of the lab.

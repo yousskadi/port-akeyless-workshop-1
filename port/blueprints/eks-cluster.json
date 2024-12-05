@@ -1,0 +1,44 @@
+{
+    "identifier": "eks",
+    "description": "",
+    "title": "EKS Cluster",
+    "icon": "Service",
+    "schema": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "title": "Name"
+        },
+        "roleArn": {
+          "type": "string",
+          "title": "Role ARN"
+        },
+        "tags": {
+          "type": "array",
+          "title": "Tags"
+        },
+        "version": {
+          "type": "string",
+          "title": "Version"
+        },
+        "endpoint": {
+          "title": "Endpoint",
+          "description": "The cluster endpoint",
+          "type": "string",
+          "format": "url"
+        }
+      },
+      "required": []
+    },
+    "mirrorProperties": {},
+    "calculationProperties": {},
+    "aggregationProperties": {},
+    "relations": {
+      "region": {
+        "title": "Region",
+        "target": "region",
+        "required": false,
+        "many": false
+      }
+    }
+  }
