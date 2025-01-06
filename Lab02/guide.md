@@ -36,6 +36,8 @@ Go to https://console.akeyless.io and click on `OIDC` and NOT `GitHub` under the
 
 ### 1.2 Login to Akeyless CLI via OIDC
 
+Open a new terminal in your codespace and run the following commands (don't worry if you get an error like this when running `akeyless --init`: `ERR! undefined option --init`) this is expected since we have already initialized the CLI in the previous lab:
+
 ```bash
 akeyless --init
 akeyless auth --access-id=p-j1ej0z1eudthim --access-type=oidc --use-remote-browser
@@ -90,7 +92,7 @@ Click on the `Show Token` button and copy the token and save it somewhere to be 
 
 ### 1.3 Run a script to create an API Key and associate it with an Access Role
 ```bash
-Lab03/create_api_key.sh
+Lab02/create_api_key.sh
 ```
 
 This script does the following:
@@ -141,7 +143,11 @@ kubectl port-forward svc/gw-akeyless-api-gateway 8000:8000 -n akeyless
 Then, in the codespace, click on the `PORTS` tab beside the `TERMINAL` tab and right click on port `8000` and change the `Port Visibility` to `Public`.
 ![alt text](../images/port_visibility_public.png)
 
-> Do the same for port 8081
+Do the same for port 8081, by opening a new terminal in your codespace and running the following command:
+```bash
+kubectl port-forward svc/gw-akeyless-api-gateway 8081:8081 -n akeyless
+```
+then right click on port `8081` and change the `Port Visibility` to `Public`.
 
 ### 2.3 Give Permission
 
@@ -180,6 +186,8 @@ Now refresh the Akeyless Console browser and click on the `Gateway` tab to see y
 ######---- This below is a good candidate for a script
 
 ## 3. Create a Target in Akeyless
+
+Open a new terminal in your codespace.
 
 You will need the AWS credentials you received in the beginning to create a target in Akeyless. You can find them by running:
 
