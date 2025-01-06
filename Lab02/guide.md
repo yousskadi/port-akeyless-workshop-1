@@ -21,9 +21,7 @@ Table of Contents:
     - [2.2 Expose the Gateway Port 8000 and 8081](#22-expose-the-gateway-port-8000-and-8081)
     - [2.3 Give Permission](#23-give-permission)
     - [2.4 Check the Gateway from the Akeyless Console](#24-check-the-gateway-from-the-akeyless-console)
-  - [3. Create a Target in Akeyless](#3-create-a-target-in-akeyless)
-  - [4. Create a Rotated Secret for the Target](#4-create-a-rotated-secret-for-the-target)
-  - [5. Create an AWS Dynamic Secret](#5-create-an-aws-dynamic-secret)
+  - [3. Create a Target, Rotated Secret, and Dynamic Secret in Akeyless](#3-create-a-target-rotated-secret-and-dynamic-secret-in-akeyless)
 
 
 ## 1. Access Akeyless via OIDC
@@ -185,83 +183,32 @@ Now refresh the Akeyless Console browser and click on the `Gateway` tab to see y
 
 ######---- This below is a good candidate for a script
 
-## 3. Create a Target in Akeyless
+## 3. Create a Target, Rotated Secret, and Dynamic Secret in Akeyless
 
 Open a new terminal in your codespace.
 
-You will need the AWS credentials you received in the beginning to create a target in Akeyless. You can find them by running:
+Run this script to create a target, rotated secret, and dynamic secret in Akeyless.
 
 ```bash
-cat ~/.aws/credentials
+Lab02/create_dynamic_aws_secret.sh
 ```
 
-Then run the command below with your AWS credentials replacing the placeholders.
-```bash
-akeyless create-aws-target --name AWS --access-key-id <aws_access_key_id> --access-key <aws_secret_access_key> --region us-east-1
-```
+This script does the following:
 
-Example:
-```bash
-akeyless create-aws-target --name AWS --access-key-id AKIAQWXXXXXX --access-key duG1kRDPXXXX --region us-east-1
-```
+1. Creates a target in Akeyless
+2. Creates a rotated secret in Akeyless
+3. Creates a dynamic secret in Akeyless
+
+Spend some time to understand the script and the output.
 
 Go to the Akeyless Console and check the newly created Target that we will use to create an AWS dynamic secret. Go to the `Targets` tab.
-![alt text](../images/targets.png)
 
-## 4. Create a Rotated Secret for the Target
+![alt text](../images/akeyless-aws-target.png)
 
-Since we always say not to have any long-lived credentials. Let's create a rotated secret that will rotate our Target's AWS credentials automatically every 30 days.
+Check both the rotated secret and the dynamic secret in the Akeyless Console. You can manually rotate the secret and create a new dynamic secret. Give it a try.
 
-Run the following command:
+![alt text](../images/akeyless-aws-rotated-secret.png)
 
-```bash
-akeyless rotated-secret create aws \
---name /Terraform/aws-target-rotated \
---target-name /AWS \
---rotator-type target \
---auto-rotate true \
---rotation-interval 30 \
---rotation-hour 10
-```
-
-Check the Akeyless UI to see the configuration there. Go to `Items` and search for `/Terraform/aws-target-rotated`.
-
-![alt text](../images/target-rotated.png)
-
-You could also manually rotate the credentials as shown below.
-
-![alt text](../images/manual-rotate-target-creds.png)
-
-## 5. Create an AWS Dynamic Secret
-
-Now it's time to create our AWS Dynamic Secret. You will need to update the command below with your `gateway-url`. You can find it by going into your Akeyless Console and click on `Gateways` and it's under `Gateway URL (Configuration):`
-
-![alt text](../images/gateway_url.png)
-
-```bash
-akeyless dynamic-secret create aws \
---name /Terraform/terraform-credentials \
---target-name AWS \
---gateway-url 'https://<Your-Akeyless-GW-URL:8000>' \
---aws-access-mode iam_user \
---aws-user-groups Akeyless-Workshops
-```
-
-Example:
-
-```bash
-akeyless dynamic-secret create aws \
---name /Terraform/terraform-credentials \
---target-name AWS \
---gateway-url 'https://curly-halibut-vg5g75v9jj4h4gw-8000.app.github.dev' \
---aws-access-mode iam_user \
---aws-user-groups Akeyless-Workshops
-```
-
-Now test this by fetching a dynamic AWS secret value using this command:
-
-```bash
-akeyless dynamic-secret get-value --name /Terraform/terraform-credentials
-```
+![alt text](../images/akeyless-aws-dynamic-secret.png)
 
 > You've reached the end of the lab.

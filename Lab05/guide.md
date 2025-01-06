@@ -7,103 +7,33 @@ In this lab we will Create an EKS cluster from Port.
 <!-- code_chunk_output -->
 
 - [Setup Port](#setup-port)
-  - [1. Sign up for Port](#1-sign-up-for-port)
-  - [2. Install Port's GitHub app](#2-install-ports-github-app)
-  - [3. Create the Region Blueprint](#3-create-the-region-blueprint)
-  - [4. Create the EKS Cluster Blueprint](#4-create-the-eks-cluster-blueprint)
-  - [5. Create a Port Action against the EKS Cluster Blueprint:](#5-create-a-port-action-against-the-eks-cluster-blueprint)
-  - [6. Add AWS Regions](#6-add-aws-regions)
-  - [7. Create an EKS Cluster](#7-create-an-eks-cluster)
+  - [1. Create an EKS Cluster](#1-create-an-eks-cluster)
+  - [2. Check the GitHub Actions Workflow](#2-check-the-github-actions-workflow)
   - [7. Check the AWS Console \[Optional\]](#7-check-the-aws-console-optional)
   - [9. Access the Cluster](#9-access-the-cluster)
 
 <!-- /code_chunk_output -->
 
-I will need to start with a brand new Port account.
-Will need to grab info from the following guide and use it for this lab:
-https://docs.getport.io/guides/all/create-eks-cluster-and-deploy-app/
+## 1. Create an EKS Cluster
+
+Go to the self-service page and click on the `Create` button under the `Create an EKS Cluster` action. Give it a name and select the us-east-1 region then click `Execute`.
+
+![alt text](../images/port-create-eks-cluster-execute.png)
+
+You can then see the run progress by clicking the `My latest runs` button at the top right.
+
+![alt text](../images/port-run-progress.png)
+
+## 2. Check the GitHub Actions Workflow
+
+After a few seconds, a GitHub icon will appear and if you click it, it will take you to the GitHub Actions workflow.
 
 
-## 1. Sign up for Port
 
-Go to https://www.getport.io/ and sign up for a free account.
 
-Go through the onboarding process of creating an account, adding your first and last name, an organization, and then skip inviting teammates and adding a Version Control System.
 
-Here is the screenshot of the onboarding process:
 
-![alt text](../images/port-onboarding.png)
 
-and here is the screenshot of your home page once you're onboarded:
-
-![alt text](../images/port-home.png)
-
-## 2. Install Port's GitHub app
-
-Click this link to install Port's GitHub app: https://github.com/apps/getport-io/installations/new
-
-Once you've successfully installed the app, you will see the data model get updated in Port. Go to Builder in the top right and click on "Data Model" to see the new data model.
-
-![alt text](../images/port-data-model.png)
-
-You will also see new Data Sources appear as shown below:
-
-![alt text](../images/port-data-sources.png)
-
-Finally, if you go to the Catalog and Services, you will see your GitHub repos there as shown below:
-
-![alt text](../images/port-catalog-services.png)
-
-## 3. Create the Region Blueprint
-
-Go to Builder in the top right and click on "Blueprints" then click on "Edit JSON" as shown below:
-
-![alt text](../images/port-region-blueprint-1.png)
-
-Next copy the content of the file `port/blueprints/region.json` in this repo and paste it into the JSON editor.
-
-![alt text](../images/port-region-blueprint-2.png)
-
-Finally, click on "Save" to save the blueprint. You will see the blueprint appear in the Data Model as shown below:
-
-![alt text](../images/port-region-blueprint-3.png)
-
-## 4. Create the EKS Cluster Blueprint
-
-Follow the same steps as above to create the EKS Cluster Blueprint. The content of the file `port/blueprints/eks-cluster.json` in this repo should be pasted into the JSON editor. Your data model should look like this:
-
-![alt text](../images/port-eks-cluster-blueprint.png)
-
-## 5. Create a Port Action against the EKS Cluster Blueprint:
-
-Go to the self-service page.
-Click on the + Action button.
-Click on the {...} Edit JSON button in the top right corner.
-Copy and paste the JSON configuration in the `port/self-service-actions/create_eks_cluster.json` file into the editor.
-Make sure to **REPLACE** the `your_org_name` and `your_repo_name` with your actual organization and repo name.
-Click Save
-
-![alt text](../images/port-create-eks-cluster-action-1.png)
-
-You should now see your new self-service action appear in the list of actions as shown below:
-
-![alt text](../images/port-create-eks-cluster-action-2.png)
-
-## 6. Add AWS Regions
-
-Go to the `Catalog` page and click on `Regions` and then click on the `+ Region` button.
-
-Fill out the form with the following values making sure to uncheck the `Autogenerate` radio button:
-- Title: `us-east-1`
-- Identifier: `us-east-1`
-
-![alt text](../images/port-create-region.png)
-
-You could optionally add more regions if you wish.
-
-## 7. Create an EKS Cluster
-
-Go to the self-service page and click on the `Create` button under the `Create an EKS Cluster` action.
 
 
 ## 7. Check the AWS Console [Optional]

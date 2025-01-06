@@ -76,12 +76,17 @@ Follow the same steps as above to create the EKS Cluster Blueprint. The content 
 
 ## 5. Create a Port Action against the EKS Cluster Blueprint:
 
-Go to the self-service page.
-Click on the + Action button.
-Click on the {...} Edit JSON button in the top right corner.
-Copy and paste the JSON configuration in the `port/self-service-actions/create_eks_cluster.json` file into the editor.
-Make sure to **REPLACE** the `your_org_name` and `your_repo_name` with your actual organization and repo name.
-Click Save
+a. Go to the self-service page.
+
+b. Click on the + Action button.
+
+c. Click on the {...} Edit JSON button in the top right corner.
+
+d. Copy and paste the JSON configuration in the `port/self-service-actions/create_eks_cluster.json` file into the editor.
+
+e. Make sure to **REPLACE in 2 places** the `your_org_name` and `your_repo_name` with your actual organization and repo name. You will find them in the `invocationMethod` section and in the `invocationMethod.workflowInputs.payload.invocationMethod`
+
+f. Click Save
 
 ![alt text](../images/port-create-eks-cluster-action-1.png)
 

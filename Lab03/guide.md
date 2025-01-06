@@ -23,11 +23,12 @@ In this lab we will get our pipeline ready and make sure we have the Akeyless pl
 
 We need to create an authentication method in Akeyless for GitHub. This is a way for GitHub to authenticate to Akeyless and retrieve the AWS credentials. We will use the JWT method so we don't have to hard-code API keys for Akeyless in GitHub. This is an elegant solution to solve the secret zero problem which is the first secret needed to retreive all other secrets.
 
-Run the command below:
+Run the commands below:
 
 ```bash
+akeyless configure --profile default --access-id "$(jq -r .access_id creds_api_key_auth.json)" --access-key "$(jq -r .access_key creds_api_key_auth.json)"
 akeyless auth-method create oauth2 \
---name GitHubAuthWorkshop \
+--name /Workshops/Akeyless-Workshop-1/GitHubAuthWorkshop \
 --jwks-uri https://token.actions.githubusercontent.com/.well-known/jwks \
 --unique-identifier repository \
 --force-sub-claims
@@ -53,7 +54,7 @@ Select Add Variable.
 Run the command below:
 
 ```bash
-akeyless create-role --name GitHubRoleWorkshop
+akeyless create-role --name /Workshops/Akeyless-Workshop-1/GitHubRoleWorkshop
 ```
 
 ## 4. Associate the Authentication Method with an Access Role
@@ -61,16 +62,16 @@ akeyless create-role --name GitHubRoleWorkshop
 Run the command below, but first update your repository for `sub-claims`. This makes sure that the GitHub repository name is included in the JWT token.
 
 ```bash
-akeyless assoc-role-am --role-name GitHubRoleWorkshop \
---am-name GitHubAuthWorkshop  \
---sub-claims repository=<octo-org/octo-repo> # replace with your repo name, mine is samgabrail/akeyless-workshop-1
+akeyless assoc-role-am --role-name /Workshops/Akeyless-Workshop-1/GitHubRoleWorkshop \
+--am-name /Workshops/Akeyless-Workshop-1/GitHubAuthWorkshop  \
+--sub-claims repository=<octo-org>/port-akeyless-workshop-1 # REPLACE <octo-org> with your github username, my repop ends up looking like this: samgabrail/port-akeyless-workshop-1
 ```
 
 ## 5. Set Read permissions for our AWS Dynamic Secret for the Access Role
 
 ```bash
-akeyless set-role-rule --role-name GitHubRoleWorkshop \
---path /Terraform/terraform-credentials \
+akeyless set-role-rule --role-name /Workshops/Akeyless-Workshop-1/GitHubRoleWorkshop \
+--path /Workshops/Akeyless-Workshop-1/* \
 --capability read
 ```
 
