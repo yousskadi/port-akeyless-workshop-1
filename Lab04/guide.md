@@ -16,6 +16,7 @@ In this lab we will get Port setup so in later labs we can do the following from
   - [4. Create the EKS Cluster Blueprint](#4-create-the-eks-cluster-blueprint)
   - [5. Create a Port Action against the EKS Cluster Blueprint:](#5-create-a-port-action-against-the-eks-cluster-blueprint)
   - [6. Add AWS Regions](#6-add-aws-regions)
+  - [7. Add Port Credentials to Akeyless](#7-add-port-credentials-to-akeyless)
 
 <!-- /code_chunk_output -->
 
@@ -105,5 +106,21 @@ Fill out the form with the following values making sure to uncheck the `Autogene
 ![alt text](../images/port-create-region.png)
 
 You could optionally add more regions if you wish.
+
+## 7. Add Port Credentials to Akeyless
+
+You now need to add the Port Client ID and Client Secret to Akeyless. You can find them in Port when you click on the 3 dots in the top right corner and then click on `Credentials`.
+
+![alt text](../images/port-credentials.png)
+
+Then copy the credentials.
+
+![alt text](../images/port-credentials-2.png)
+
+The script `add_port_creds.sh` in this Lab's directory will add the credentials to Akeyless. Run it below and it will prompt you for the credentials.
+
+```bash
+Lab04/add_port_creds.sh
+```
 
 > You've reached the end of the lab.

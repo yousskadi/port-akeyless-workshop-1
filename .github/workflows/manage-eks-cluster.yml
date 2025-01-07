@@ -19,7 +19,7 @@ on:
         type: string
 
 env:
-  AKEYLESS_ACCESS_ID: ${{ secrets.AKEYLESS_ACCESS_ID }}
+  AKEYLESS_ACCESS_ID: ${{ env.AKEYLESS_ACCESS_ID }}
   DYNAMIC_SECRET_TTL: "3600"
 jobs:
   manage_cluster:
@@ -52,7 +52,7 @@ jobs:
           echo "AKEYLESS_GATEWAY_URL=https://192.168.1.82:8000" >> $GITHUB_ENV
           export AKEYLESS_TOKEN=$(akeyless auth --access-id ${AKEYLESS_ACCESS_ID} --access-type jwt --jwt "$TOKEN" --json | jq -r '.token')
         
-          PORT_CREDS=$(akeyless get-secret-value --token $AKEYLESS_TOKEN --name '/demos/port/creds')
+          PORT_CREDS=$(akeyless get-secret-value --token $AKEYLESS_TOKEN --name '/Workshops/Akeyless-Workshop-1/port/creds')
           echo "PORT_CLIENT_ID=$(echo $PORT_CREDS | jq -r '.client_id')" >> $GITHUB_ENV
           echo "PORT_CLIENT_SECRET=$(echo $PORT_CREDS | jq -r '.client_secret')" >> $GITHUB_ENV
           
