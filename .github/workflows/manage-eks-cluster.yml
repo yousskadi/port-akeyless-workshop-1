@@ -19,8 +19,7 @@ on:
         type: string
 
 env:
-  DYNAMIC_SECRET_TTL: "3600"
-  GITHUB_ACTOR: ${{ github.actor }}
+  GITHUB_USERNAME: ${{ github.repository_owner }}
 jobs:
   manage_cluster:
     permissions:
@@ -46,16 +45,46 @@ jobs:
           access-id: ${{ vars.AKEYLESS_ACCESS_ID }}
           access-type: jwt
           static-secrets: |
-            - name: "/Workshops/Akeyless-Port-1/$GITHUB_ACTOR/port/creds"
+            - name: "/Workshops/Akeyless-Port-1/${{ env.GITHUB_USERNAME }}/port/creds"
               output-name: "PORT_CREDS"
           dynamic-secrets: |
-            - name: "/Workshops/Akeyless-Port-1/$GITHUB_ACTOR/AWS-Dynamic"
+            - name: "/Workshops/Akeyless-Port-1/${{ env.GITHUB_USERNAME }}/AWS-Dynamic"
               output-name: "aws_dynamic_secret"
+        continue-on-error: true
+
+      - name: Check Akeyless Secrets Fetch Status
+        run: |
+          if [ "${{ steps.fetch-akeyless-secrets.outcome }}" == "failure" ]; then
+            echo "::error::Failed to fetch secrets from Akeyless"
+            echo "Debugging information:"
+            echo "GitHub Username: ${{ env.GITHUB_USERNAME }}"
+            echo "Access ID: ${{ vars.AKEYLESS_ACCESS_ID }}"
+            exit 1
+          fi
 
       - name: Put Port Credentials into Environment Variables
         run: |
-          echo "PORT_CLIENT_ID=$(echo ${{ steps.fetch-akeyless-secrets.outputs.PORT_CREDS }} | jq -r '.client_id')" >> $GITHUB_ENV
-          echo "PORT_CLIENT_SECRET=$(echo ${{ steps.fetch-akeyless-secrets.outputs.PORT_CREDS }} | jq -r '.client_secret')" >> $GITHUB_ENV
+          if [ -z "${{ steps.fetch-akeyless-secrets.outputs.PORT_CREDS }}" ]; then
+            echo "::error::PORT_CREDS is empty"
+            exit 1
+          fi
+          # Debug the JSON format (will be masked in logs)
+          echo "PORT_CREDS format: $(echo '${{ steps.fetch-akeyless-secrets.outputs.PORT_CREDS }}' | jq -r 'type')"
+          
+          # Remove any potential whitespace and ensure proper JSON formatting
+          CLEANED_CREDS=$(echo '${{ steps.fetch-akeyless-secrets.outputs.PORT_CREDS }}' | tr -d '[:space:]')
+          
+          # Extract values with error checking
+          CLIENT_ID=$(echo "$CLEANED_CREDS" | jq -r '.client_id // empty')
+          CLIENT_SECRET=$(echo "$CLEANED_CREDS" | jq -r '.client_secret // empty')
+          
+          if [ -z "$CLIENT_ID" ] || [ -z "$CLIENT_SECRET" ]; then
+            echo "::error::Failed to parse client_id or client_secret from credentials"
+            exit 1
+          fi
+          
+          echo "PORT_CLIENT_ID=$CLIENT_ID" >> $GITHUB_ENV
+          echo "PORT_CLIENT_SECRET=$CLIENT_SECRET" >> $GITHUB_ENV
 
       - name: Export AWS Creds to Environment
         run: |
@@ -64,36 +93,9 @@ jobs:
       # Setup AWS CLI
       - name: Configure AWS Credentials
         run: |
-          env | grep -i aws
+          # env | grep -i aws
           aws configure set aws_access_key_id ${{ env.AWS_ACCESS_KEY_ID }}
           aws configure set aws_secret_access_key ${{ env.AWS_SECRET_ACCESS_KEY }}
-
-      # - name: Configure Akeyless CLI and Get Secrets
-      #   run: |
-      #     # Set Akeyless Gateway URL directly
-      #     echo "AKEYLESS_GATEWAY_URL=$(cat ../akeyless_gateway_url.txt)" >> $GITHUB_ENV
-          
-      #     # Get GitHub Actions OIDC token
-      #     echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN=${{ env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}" >> $GITHUB_ENV
-      #     echo "ACTIONS_ID_TOKEN_REQUEST_URL=${{ env.ACTIONS_ID_TOKEN_REQUEST_URL }}" >> $GITHUB_ENV
-          
-      #     # Get JWT token
-      #     TOKEN=$(curl -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL" | jq -r '.value')
-          
-      #     # Authenticate with Akeyless using JWT
-      #     export AKEYLESS_TOKEN=$(akeyless auth --access-id ${AKEYLESS_ACCESS_ID} --access-type jwt --jwt "$TOKEN" --json | jq -r '.token')
-          
-      #     # Get the GitHub username using github.actor
-      #     GITHUB_USERNAME="$GITHUB_ACTOR"
-          
-      #     PORT_CREDS=$(akeyless get-secret-value --token $AKEYLESS_TOKEN --name "/Workshops/Akeyless-Port-1/${GITHUB_USERNAME}/port/creds")
-      #     echo "PORT_CLIENT_ID=$(echo $PORT_CREDS | jq -r '.client_id')" >> $GITHUB_ENV
-      #     echo "PORT_CLIENT_SECRET=$(echo $PORT_CREDS | jq -r '.client_secret')" >> $GITHUB_ENV
-          
-      #     # Get AWS dynamic credentials --- need to check below works
-      #     AWS_CREDS=$(akeyless get-dynamic-secret --token $AKEYLESS_TOKEN --name '/Workshops/Akeyless-Port-1/${GITHUB_USERNAME}/AWS-Dynamic' --dynamic-secret-ttl ${DYNAMIC_SECRET_TTL})
-      #     echo "AWS_ACCESS_KEY_ID=$(echo $AWS_CREDS | jq -r '.access_key_id')" >> $GITHUB_ENV
-      #     echo "AWS_SECRET_ACCESS_KEY=$(echo $AWS_CREDS | jq -r '.secret_access_key')" >> $GITHUB_ENV
 
       - name: Create a log message (apply)
         if: ${{ github.event.inputs.action == 'apply' }}
@@ -108,7 +110,7 @@ jobs:
 
       - name: Generate backend.hcl
         run: |
-          echo "key = \"workshop-port-akeyless-1-${GITHUB_ACTOR}/terraform.tfstate\"" > backend.hcl
+          echo "key = \"workshop-port-akeyless-1-${{ env.GITHUB_USERNAME }}/terraform.tfstate\"" > backend.hcl
           sleep 30 # Wait for AWS to assign IAM permissions to the credentials
 
       - name: Terraform Init
@@ -125,7 +127,7 @@ jobs:
         if: ${{ github.event.inputs.action == 'apply' }}
         run: terraform apply -auto-approve
         env:
-          TF_VAR_cluster_name: ${{ github.event.inputs.cluster_name }}-${GITHUB_ACTOR}
+          TF_VAR_cluster_name: ${{ github.event.inputs.cluster_name }}-${{ env.GITHUB_USERNAME }}
           TF_VAR_region: ${{ github.event.inputs.region }}
           TF_VAR_port_run_id: ${{ fromJson(inputs.port_payload).context.runId }}
 
@@ -133,7 +135,7 @@ jobs:
         if: ${{ github.event.inputs.action == 'destroy' }}
         run: terraform destroy -auto-approve
         env:
-          TF_VAR_cluster_name: ${{ github.event.inputs.cluster_name }}-${GITHUB_ACTOR}
+          TF_VAR_cluster_name: ${{ github.event.inputs.cluster_name }}-${{ env.GITHUB_USERNAME }}
           TF_VAR_region: ${{ github.event.inputs.region }}
           TF_VAR_port_run_id: ${{ fromJson(inputs.port_payload).context.runId }}
 

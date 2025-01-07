@@ -3,7 +3,7 @@
 # Akeyless profile configuration
 akeyless configure --profile default --access-id "$(jq -r .access_id creds_api_key_auth.json)" --access-key "$(jq -r .access_key creds_api_key_auth.json)"
 
-DYNAMIC_SECRET_TTL="15s"
+DYNAMIC_SECRET_TTL="1h"
 # Get repository information from git
 REPO_URL=$(git config --get remote.origin.url)
 REPO_NAME=$(echo $REPO_URL | grep -o 'github.com[:/][^.]*' | sed 's#github.com[:/]##')
