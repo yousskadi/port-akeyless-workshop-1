@@ -8,6 +8,7 @@ Key Objectives:
 - Create a Gateway in Akeyless
 - Give permissions to access the Gateway
 - Check the Gateway from the Akeyless Console 
+- Create a Target, Rotated Secret, and Dynamic Secret in Akeyless
 
 Table of Contents:
 

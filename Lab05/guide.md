@@ -10,8 +10,7 @@ In this lab we will build the EKS cluster from Port.
   - [1. Commit and Push the Changes](#1-commit-and-push-the-changes)
   - [2. Create an EKS Cluster](#2-create-an-eks-cluster)
   - [2. Check the GitHub Actions Workflow](#2-check-the-github-actions-workflow)
-  - [7. Check the AWS Console \[Optional\]](#7-check-the-aws-console-optional)
-  - [9. Access the Cluster](#9-access-the-cluster)
+  - [3. Access the Cluster](#3-access-the-cluster)
 
 <!-- /code_chunk_output -->
 
@@ -41,29 +40,34 @@ You can then see the run progress by clicking the `My latest runs` button at the
 
 After a few seconds, a GitHub icon will appear and if you click it, it will take you to the GitHub Actions workflow.
 
+![alt text](../images/port-eks-cluster-in-progress.png)
 
+You can check the GitHub actions workflow to see the progress of the run.
 
+![alt text](../images/github-actions-progress.png)
 
+Finally, when the EKS cluster is created (takes about 35 minutes), you will see it in the Port UI.
 
+![alt text](../images/port-eks-cluster-success.png)
 
-
-
-
-## 7. Check the AWS Console [Optional]
-
-If you wish, you could log into the AWS console and see your EKS cluster there. Below is a snapshot of what you would see.
-
-![alt text](../images/cluster_created.png)
-
-## 9. Access the Cluster
+## 3. Access the Cluster
 
 To get the kubeconfig for the cluster, run the command below replacing <your-eks-cluster-name> with your eks cluster name which will show up in the output of terraform or you can see in the AWS console.
 
+Run the following script:
+
+
+
 ```bash
+akeyless configure --profile default --access-id "$(jq -r .access_id creds_api_key_auth.json)" --access-key "$(jq -r .access_key creds_api_key_auth.json)"
+AWS_CREDS=$(akeyless dynamic-secret get-value --name '/Workshops/Akeyless-Port-1/AWS-Dynamic')
+echo AWS_CREDS: $AWS_CREDS
+echo "AWS_ACCESS_KEY_ID=$(echo $AWS_CREDS | jq -r '.access_key_id')" >> $GITHUB_ENV
+echo "AWS_SECRET_ACCESS_KEY=$(echo $AWS_CREDS | jq -r '.secret_access_key')" >> $GITHUB_ENV
 aws eks update-kubeconfig --region us-east-1 --name <your-eks-cluster-name>
 ```
 
-> Note: If after you run the pipeline and find that you get an error accessing the cluster, it could be that you need to refresh the AWS credentials you're using, that is if you are using the ones provided by TeKanAid Academy. You can refresh them by running the command: `/.start.sh` again.
+> Note: If after you run the pipeline and find that you get an error accessing the cluster, it could be that you need to refresh the AWS credentials you're using, that is if you are using the ones provided by TeKanAid Academy. You can refresh them by running the command: `Lab01/start.sh` again.
 
 You can now use `kubectl` to access the cluster.
 

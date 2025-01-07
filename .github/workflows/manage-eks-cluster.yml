@@ -135,7 +135,7 @@ jobs:
         if: ${{ github.event.inputs.action == 'destroy' }}
         run: terraform destroy -auto-approve
         env:
-          TF_VAR_cluster_name: ${{ github.event.inputs.cluster_name }}-${{ env.GITHUB_USERNAME }}
+          TF_VAR_cluster_name: ${{ fromJson(inputs.port_payload).payload.entity.properties.name }}
           TF_VAR_region: ${{ github.event.inputs.region }}
           TF_VAR_port_run_id: ${{ fromJson(inputs.port_payload).context.runId }}
 

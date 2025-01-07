@@ -1,4 +1,4 @@
-name: Build and Deploy Node.js App to EKS
+name: Build and Deploy Image to EKS
 
 on:
   workflow_dispatch:

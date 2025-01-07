@@ -1,6 +1,6 @@
 # Setup Port
 
-In this lab we will get Port setup
+In this lab we will get Port setup. This section is based [on this guide](https://docs.getport.io/guides/all/create-eks-cluster-and-deploy-app/)
 
 <!-- @import "[TOC]" {cmd="toc" depthFrom=1 depthTo=6 orderedList=false} -->
 
@@ -16,11 +16,6 @@ In this lab we will get Port setup
   - [7. Add Port Credentials to Akeyless](#7-add-port-credentials-to-akeyless)
 
 <!-- /code_chunk_output -->
-
-I will need to start with a brand new Port account.
-Will need to grab info from the following guide and use it for this lab:
-https://docs.getport.io/guides/all/create-eks-cluster-and-deploy-app/
-
 
 ## 1. Sign up for Port
 
