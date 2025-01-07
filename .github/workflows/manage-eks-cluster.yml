@@ -19,8 +19,8 @@ on:
         type: string
 
 env:
-  AKEYLESS_ACCESS_ID: ${{ env.AKEYLESS_ACCESS_ID }}
   DYNAMIC_SECRET_TTL: "3600"
+  GITHUB_ACTOR: ${{ github.actor }}
 jobs:
   manage_cluster:
     permissions:
@@ -39,27 +39,61 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Configure Akeyless CLI and Get Secrets
+      - name: Fetch Secrets from Akeyless
+        id: fetch-akeyless-secrets
+        uses: akeyless-community/akeyless-github-action@v1.1.1
+        with:
+          access-id: ${{ vars.AKEYLESS_ACCESS_ID }}
+          access-type: jwt
+          static-secrets: |
+            - name: "/Workshops/Akeyless-Port-1/$GITHUB_ACTOR/port/creds"
+              output-name: "PORT_CREDS"
+          dynamic-secrets: |
+            - name: "/Workshops/Akeyless-Port-1/$GITHUB_ACTOR/AWS-Dynamic"
+              output-name: "aws_dynamic_secret"
+
+      - name: Put Port Credentials into Environment Variables
         run: |
-          # Get GitHub Actions OIDC token
-          echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN=${{ env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}" >> $GITHUB_ENV
-          echo "ACTIONS_ID_TOKEN_REQUEST_URL=${{ env.ACTIONS_ID_TOKEN_REQUEST_URL }}" >> $GITHUB_ENV
+          echo "PORT_CLIENT_ID=$(echo ${{ steps.fetch-akeyless-secrets.outputs.PORT_CREDS }} | jq -r '.client_id')" >> $GITHUB_ENV
+          echo "PORT_CLIENT_SECRET=$(echo ${{ steps.fetch-akeyless-secrets.outputs.PORT_CREDS }} | jq -r '.client_secret')" >> $GITHUB_ENV
+
+      - name: Export AWS Creds to Environment
+        run: |
+          echo '${{ steps.fetch-akeyless-secrets.outputs.aws_dynamic_secret }}' | jq -r 'to_entries|map("AWS_\(.key|ascii_upcase)=\(.value|tostring)")|.[]' >> $GITHUB_ENV
+
+      # Setup AWS CLI
+      - name: Configure AWS Credentials
+        run: |
+          env | grep -i aws
+          aws configure set aws_access_key_id ${{ env.AWS_ACCESS_KEY_ID }}
+          aws configure set aws_secret_access_key ${{ env.AWS_SECRET_ACCESS_KEY }}
+
+      # - name: Configure Akeyless CLI and Get Secrets
+      #   run: |
+      #     # Set Akeyless Gateway URL directly
+      #     echo "AKEYLESS_GATEWAY_URL=$(cat ../akeyless_gateway_url.txt)" >> $GITHUB_ENV
           
-          # Get JWT token
-          TOKEN=$(curl -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL" | jq -r '.value')
+      #     # Get GitHub Actions OIDC token
+      #     echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN=${{ env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}" >> $GITHUB_ENV
+      #     echo "ACTIONS_ID_TOKEN_REQUEST_URL=${{ env.ACTIONS_ID_TOKEN_REQUEST_URL }}" >> $GITHUB_ENV
           
-          # Authenticate with Akeyless using JWT --- need to change the gateway URL
-          echo "AKEYLESS_GATEWAY_URL=https://192.168.1.82:8000" >> $GITHUB_ENV
-          export AKEYLESS_TOKEN=$(akeyless auth --access-id ${AKEYLESS_ACCESS_ID} --access-type jwt --jwt "$TOKEN" --json | jq -r '.token')
-        
-          PORT_CREDS=$(akeyless get-secret-value --token $AKEYLESS_TOKEN --name '/Workshops/Akeyless-Workshop-1/port/creds')
-          echo "PORT_CLIENT_ID=$(echo $PORT_CREDS | jq -r '.client_id')" >> $GITHUB_ENV
-          echo "PORT_CLIENT_SECRET=$(echo $PORT_CREDS | jq -r '.client_secret')" >> $GITHUB_ENV
+      #     # Get JWT token
+      #     TOKEN=$(curl -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL" | jq -r '.value')
           
-          # Get AWS dynamic credentials --- need to check below works
-          AWS_CREDS=$(akeyless get-dynamic-secret --token $AKEYLESS_TOKEN --name '/demos/aws/eks-creds' --dynamic-secret-ttl ${DYNAMIC_SECRET_TTL})
-          echo "AWS_ACCESS_KEY_ID=$(echo $AWS_CREDS | jq -r '.access_key_id')" >> $GITHUB_ENV
-          echo "AWS_SECRET_ACCESS_KEY=$(echo $AWS_CREDS | jq -r '.secret_access_key')" >> $GITHUB_ENV
+      #     # Authenticate with Akeyless using JWT
+      #     export AKEYLESS_TOKEN=$(akeyless auth --access-id ${AKEYLESS_ACCESS_ID} --access-type jwt --jwt "$TOKEN" --json | jq -r '.token')
+          
+      #     # Get the GitHub username using github.actor
+      #     GITHUB_USERNAME="$GITHUB_ACTOR"
+          
+      #     PORT_CREDS=$(akeyless get-secret-value --token $AKEYLESS_TOKEN --name "/Workshops/Akeyless-Port-1/${GITHUB_USERNAME}/port/creds")
+      #     echo "PORT_CLIENT_ID=$(echo $PORT_CREDS | jq -r '.client_id')" >> $GITHUB_ENV
+      #     echo "PORT_CLIENT_SECRET=$(echo $PORT_CREDS | jq -r '.client_secret')" >> $GITHUB_ENV
+          
+      #     # Get AWS dynamic credentials --- need to check below works
+      #     AWS_CREDS=$(akeyless get-dynamic-secret --token $AKEYLESS_TOKEN --name '/Workshops/Akeyless-Port-1/${GITHUB_USERNAME}/AWS-Dynamic' --dynamic-secret-ttl ${DYNAMIC_SECRET_TTL})
+      #     echo "AWS_ACCESS_KEY_ID=$(echo $AWS_CREDS | jq -r '.access_key_id')" >> $GITHUB_ENV
+      #     echo "AWS_SECRET_ACCESS_KEY=$(echo $AWS_CREDS | jq -r '.secret_access_key')" >> $GITHUB_ENV
 
       - name: Create a log message (apply)
         if: ${{ github.event.inputs.action == 'apply' }}
@@ -74,10 +108,7 @@ jobs:
 
       - name: Generate backend.hcl
         run: |
-          SUFFIX=${GITHUB_ACTOR}
-          echo "key = \"workshop-port-akeyless-1-${SUFFIX}/terraform.tfstate\"" > backend.hcl
-          echo "Generated suffix: ${SUFFIX}"
-          echo "SUFFIX=${SUFFIX}" >> $GITHUB_ENV  # Export SUFFIX to the environment
+          echo "key = \"workshop-port-akeyless-1-${GITHUB_ACTOR}/terraform.tfstate\"" > backend.hcl
           sleep 30 # Wait for AWS to assign IAM permissions to the credentials
 
       - name: Terraform Init
@@ -94,7 +125,7 @@ jobs:
         if: ${{ github.event.inputs.action == 'apply' }}
         run: terraform apply -auto-approve
         env:
-          TF_VAR_cluster_name: ${{ github.event.inputs.cluster_name }}-${SUFFIX}
+          TF_VAR_cluster_name: ${{ github.event.inputs.cluster_name }}-${GITHUB_ACTOR}
           TF_VAR_region: ${{ github.event.inputs.region }}
           TF_VAR_port_run_id: ${{ fromJson(inputs.port_payload).context.runId }}
 
@@ -102,7 +133,7 @@ jobs:
         if: ${{ github.event.inputs.action == 'destroy' }}
         run: terraform destroy -auto-approve
         env:
-          TF_VAR_cluster_name: ${{ github.event.inputs.cluster_name }}-${SUFFIX}
+          TF_VAR_cluster_name: ${{ github.event.inputs.cluster_name }}-${GITHUB_ACTOR}
           TF_VAR_region: ${{ github.event.inputs.region }}
           TF_VAR_port_run_id: ${{ fromJson(inputs.port_payload).context.runId }}
 

@@ -1,20 +1,33 @@
-# Setup Port
+# Build the EKS Cluster from Port
 
-In this lab we will Create an EKS cluster from Port.
+In this lab we will build the EKS cluster from Port.
 
 <!-- @import "[TOC]" {cmd="toc" depthFrom=1 depthTo=6 orderedList=false} -->
 
 <!-- code_chunk_output -->
 
-- [Setup Port](#setup-port)
-  - [1. Create an EKS Cluster](#1-create-an-eks-cluster)
+- [Build the EKS Cluster from Port](#build-the-eks-cluster-from-port)
+  - [1. Commit and Push the Changes](#1-commit-and-push-the-changes)
+  - [2. Create an EKS Cluster](#2-create-an-eks-cluster)
   - [2. Check the GitHub Actions Workflow](#2-check-the-github-actions-workflow)
   - [7. Check the AWS Console \[Optional\]](#7-check-the-aws-console-optional)
   - [9. Access the Cluster](#9-access-the-cluster)
 
 <!-- /code_chunk_output -->
 
-## 1. Create an EKS Cluster
+## 1. Commit and Push the Changes
+
+Before we can create an EKS cluster, we need to commit and push the changes to the repository. Mainly, we need to update the Gateway URL in the GitHub Actions Workflow. The Gateway URL is stored in the file `akeyless_gateway_url.txt` in the root of this repository. The workflow will read this file and use the URL for multiple purposes.
+
+In a terminal, run the following commands:
+
+```bash
+git add .
+git commit -m "Update the Gateway URL in the GitHub Actions Workflow"
+git push
+```
+
+## 2. Create an EKS Cluster
 
 Go to the self-service page and click on the `Create` button under the `Create an EKS Cluster` action. Give it a name and select the us-east-1 region then click `Execute`.
 

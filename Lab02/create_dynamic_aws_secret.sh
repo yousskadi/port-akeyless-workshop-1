@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/usr/bin/bash
 
-# Script configuration
+# Akeyless profile configuration
 akeyless configure --profile default --access-id "$(jq -r .access_id creds_api_key_auth.json)" --access-key "$(jq -r .access_key creds_api_key_auth.json)"
 
 DYNAMIC_SECRET_TTL="15s"
@@ -12,8 +12,6 @@ REPO_URL="https://github.com/${REPO_NAME}.git"
 # Get AWS credentials from ~/.aws/credentials
 AWS_ACCESS_KEY_ID=$(awk -F'=' '/aws_access_key_id/ {gsub(/^[ \t]+|[ \t]+$/, "", $2); print $2}' ~/.aws/credentials)
 AWS_SECRET_ACCESS_KEY=$(awk -F'=' '/aws_secret_access_key/ {gsub(/^[ \t]+|[ \t]+$/, "", $2); print $2}' ~/.aws/credentials)
-echo "AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID"
-echo "AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY"
 # Get Codespace name and construct Akeyless Gateway URL
 CODESPACE_NAME=$(gh codespace list --json name,repository -q ".[] | select(.repository==\"${REPO_NAME}\") | .name")
 if [ -z "$CODESPACE_NAME" ]; then
@@ -23,7 +21,7 @@ fi
 
 CODESPACE_DOMAIN="app.github.dev"
 AKEYLESS_GATEWAY_URL="https://${CODESPACE_NAME}-8000.${CODESPACE_DOMAIN}"
-
+echo "${AKEYLESS_GATEWAY_URL}" > akeyless_gateway_url.txt
 # Create Akeyless target
 echo "Creating Akeyless target..."
 akeyless target create aws \

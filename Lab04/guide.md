@@ -1,9 +1,6 @@
 # Setup Port
 
-In this lab we will get Port setup so in later labs we can do the following from Port:
-1. Create an EKS cluster
-2. Scaffold a Node.js app
-3. Build and deploy the Node.js app to the EKS cluster
+In this lab we will get Port setup
 
 <!-- @import "[TOC]" {cmd="toc" depthFrom=1 depthTo=6 orderedList=false} -->
 

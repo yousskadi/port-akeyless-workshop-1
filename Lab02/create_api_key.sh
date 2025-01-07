@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/bash
 set -e
 
 REPO_URL=$(git config --get remote.origin.url)

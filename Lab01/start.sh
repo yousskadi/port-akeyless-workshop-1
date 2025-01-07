@@ -1,8 +1,8 @@
-#!/usr/bin/bash
+#!/usr/usr/bin/bash
 
-# Set the Akeyless access ID and access key
-export AKEYLESS_ACCESS_ID=
-export AKEYLESS_ACCESS_KEY=
+# Set the Akeyless access ID and access key by asking the user for them
+read -p "Enter your Akeyless Access ID: " AKEYLESS_ACCESS_ID
+read -p "Enter your Akeyless Access Key: " AKEYLESS_ACCESS_KEY
 
 # Check if the Akeyless access ID and access key are set
 if [ -z "$AKEYLESS_ACCESS_ID" ] || [ -z "$AKEYLESS_ACCESS_KEY" ]; then
