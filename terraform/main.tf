@@ -43,7 +43,14 @@ module "eks" {
   subnet_ids                     = data.terraform_remote_state.vpc.outputs.private_subnets
   cluster_endpoint_public_access = true
 
+  # Disable creation of custom KMS key
   create_kms_key = false
+
+  # Use AWS managed key for cluster encryption
+  cluster_encryption_config = {
+    resources        = ["secrets"]
+    provider_key_arn = "arn:aws:kms:${var.region}:${data.aws_caller_identity.current.account_id}:alias/aws/eks"
+  }
 
   eks_managed_node_group_defaults = {
     ami_type = "AL2_x86_64"
@@ -72,6 +79,8 @@ module "eks" {
   }
 }
 
+# Add this data source to get the current AWS account ID
+data "aws_caller_identity" "current" {}
 
 # https://aws.amazon.com/blogs/containers/amazon-ebs-csi-driver-is-now-generally-available-in-amazon-eks-add-ons/ 
 data "aws_iam_policy" "ebs_csi_policy" {
