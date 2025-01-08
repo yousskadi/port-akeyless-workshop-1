@@ -1,4 +1,4 @@
-#!/usr/usr/bin/bash
+#!/usr/bin/bash
 
 # Set the Akeyless access ID and access key by asking the user for them
 read -p "Enter your Akeyless Access ID: " AKEYLESS_ACCESS_ID

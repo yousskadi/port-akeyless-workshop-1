@@ -30,18 +30,10 @@ Start a GitHub Codespace on your forked repo.
 
 If you are working on this workshop live then ask your instructor to provide the `AKEYLESS_ACCESS_ID` and `AKEYLESS_ACCESS_KEY` credentials. If you are working on this workshop on your own and you are a premium subscriber then get your Akeyless creds from the TeKanAid lesson text in `Lab01-Environment Setup`.
 
-Add these credentials in the `start.sh` script at the top then run the script:
+When you run the `Lab01/start.sh` script you will be asked to enter these credentials.
 
 ```bash
-cd Lab01
-./start.sh
-```
-
-like this:
-
-```bash
-export AKEYLESS_ACCESS_ID="xxx"
-export AKEYLESS_ACCESS_KEY="xxx"
+Lab01/start.sh
 ```
 
 The script will create your AWS credentials using Akeyless' Dynamic AWS Secrets. It will configure programmatic access (`AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`) by writing to ~/.aws/credentials.
