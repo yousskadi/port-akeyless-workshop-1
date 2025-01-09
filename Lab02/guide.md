@@ -117,7 +117,7 @@ Lab02/prepare_gateway_config.sh
 Then run the following commands in the `Terminal` of your GitHub codespace.
 
 ```bash
-helm upgrade --install gw akeyless/akeyless-api-gateway --namespace akeyless -f values.yaml
+helm upgrade --install gw akeyless/akeyless-gateway --namespace akeyless -f values.yaml
 
 kubens akeyless
 ```

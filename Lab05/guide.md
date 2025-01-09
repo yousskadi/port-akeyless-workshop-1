@@ -28,7 +28,7 @@ git push
 
 ## 2. Create an EKS Cluster
 
-Go to the self-service page and click on the `Create` button under the `Create an EKS Cluster` action. Give it a name and select the us-east-1 region then click `Execute`.
+Go to the self-service page and click on the `Create` button under the `Create an EKS Cluster` action. Give it a short name and select the us-east-1 region then click `Execute`.
 
 ![alt text](../images/port-create-eks-cluster-execute.png)
 
@@ -52,10 +52,13 @@ Finally, when the EKS cluster is created (takes about 35 minutes), you will see 
 
 ## 3. Access the Cluster
 
-To get the kubeconfig for the cluster, run the command below replacing <your-eks-cluster-name> with your eks cluster name which will show up in the output of terraform or you can see in the AWS console.
+To get the kubeconfig for the cluster, run the command below replacing <your-eks-cluster-name> with your eks cluster name which will show up in the Port UI as shown in the two screenshots below:
+
+![alt text](../images/port-eks-cluster-catalog-1.png)
+
+![alt text](../images/port-eks-cluster-catalog-2.png)
 
 Run the following script:
-
 
 
 ```bash
