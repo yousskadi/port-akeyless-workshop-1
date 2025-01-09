@@ -22,42 +22,120 @@ on:
         description: "Port's payload (who triggered, context, etc...)"
         type: string
 
+env:
+  GITHUB_USERNAME: ${{ github.repository_owner }}
+  AWS_REGION: us-east-1
+
 jobs:
   scaffold_app:
-    runs-on: ubuntu-latest
-
-    env:
-      AKEYLESS_ACCESS_ID: ${{ secrets.AKEYLESS_ACCESS_ID }}
-      AWS_REGION: us-east-1
-      
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    runs-on: ubuntu-latest     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v2
 
-      - name: Configure Akeyless CLI and Get Secrets
+      - name: Fetch Secrets from Akeyless
+        id: fetch-akeyless-secrets
+        uses: akeyless-community/akeyless-github-action@v1.1.1
+        with:
+          access-id: ${{ vars.AKEYLESS_ACCESS_ID }}
+          access-type: jwt
+          static-secrets: |
+            - name: "/Workshops/Akeyless-Port-1/${{ env.GITHUB_USERNAME }}/port/creds"
+              output-name: "PORT_CREDS"
+            - name: "/Workshops/Akeyless-Port-1/${{ env.GITHUB_USERNAME }}/github/pat"
+              output-name: "PERSONAL_ACCESS_TOKEN"
+          dynamic-secrets: |
+            - name: "/Workshops/Akeyless-Port-1/${{ env.GITHUB_USERNAME }}/AWS-Dynamic"
+              output-name: "aws_dynamic_secret"
+        continue-on-error: true
+
+      - name: Check Akeyless Secrets Fetch Status
         run: |
-          # Get GitHub Actions OIDC token
-          echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN=${{ env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}" >> $GITHUB_ENV
-          echo "ACTIONS_ID_TOKEN_REQUEST_URL=${{ env.ACTIONS_ID_TOKEN_REQUEST_URL }}" >> $GITHUB_ENV
-          
-          # Get JWT token
-          TOKEN=$(curl -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL" | jq -r '.value')
-          
-          # Authenticate with Akeyless using JWT --- need to change the gateway URL
-          echo "AKEYLESS_GATEWAY_URL=https://192.168.1.82:8000" >> $GITHUB_ENV
-          export AKEYLESS_TOKEN=$(akeyless auth --access-id ${AKEYLESS_ACCESS_ID} --access-type jwt --jwt "$TOKEN" --json | jq -r '.token')
-        
-          PORT_CREDS=$(akeyless get-secret-value --token $AKEYLESS_TOKEN --name '/demos/port/creds')
-          echo "PORT_CLIENT_ID=$(echo $PORT_CREDS | jq -r '.client_id')" >> $GITHUB_ENV
-          echo "PORT_CLIENT_SECRET=$(echo $PORT_CREDS | jq -r '.client_secret')" >> $GITHUB_ENV
-          
-          # Get AWS dynamic credentials --- need to check below works
-          AWS_CREDS=$(akeyless get-dynamic-secret --token $AKEYLESS_TOKEN --name '/demos/aws/eks-creds' --dynamic-secret-ttl ${DYNAMIC_SECRET_TTL})
-          echo "AWS_ACCESS_KEY_ID=$(echo $AWS_CREDS | jq -r '.access_key_id')" >> $GITHUB_ENV
-          echo "AWS_SECRET_ACCESS_KEY=$(echo $AWS_CREDS | jq -r '.secret_access_key')" >> $GITHUB_ENV
+          if [ "${{ steps.fetch-akeyless-secrets.outcome }}" == "failure" ]; then
+            echo "::error::Failed to fetch secrets from Akeyless"
+            echo "Debugging information:"
+            echo "GitHub Username: ${{ env.GITHUB_USERNAME }}"
+            echo "Access ID: ${{ vars.AKEYLESS_ACCESS_ID }}"
+            exit 1
+          fi
 
-          # Get GitHub PAT
-          echo "PERSONAL_ACCESS_TOKEN=$(akeyless get-secret-value --token $AKEYLESS_TOKEN --name '/demos/github/pat')" >> $GITHUB_ENV
+      - name: Put Port and GitHub PAT Credentials into Environment Variables
+        run: |
+          if [ -z "${{ steps.fetch-akeyless-secrets.outputs.PORT_CREDS }}" ]; then
+            echo "::error::PORT_CREDS is empty"
+            exit 1
+          fi
+          
+          if [ -z "${{ steps.fetch-akeyless-secrets.outputs.PERSONAL_ACCESS_TOKEN }}" ]; then
+            echo "::error::PERSONAL_ACCESS_TOKEN is empty"
+            exit 1
+          fi
+          
+          # Extract PAT value from JSON
+          ACTUAL_PAT=$(echo '${{ steps.fetch-akeyless-secrets.outputs.PERSONAL_ACCESS_TOKEN }}' | jq -r '.pat')
+          
+          # Debug PAT (length only, for security)
+          PAT_LENGTH=$(echo -n "$ACTUAL_PAT" | wc -c)
+          echo "PAT length: $PAT_LENGTH"
+          
+          # Debug first and last few characters of PAT (safely)
+          echo "PAT starts with: ${ACTUAL_PAT:0:4}..."
+          echo "PAT ends with: ...${ACTUAL_PAT: -4}"
+          
+          # Debug PORT_CREDS
+          echo "PORT_CREDS format: $(echo '${{ steps.fetch-akeyless-secrets.outputs.PORT_CREDS }}' | jq -r 'type')"
+          
+          # Remove any potential whitespace and ensure proper JSON formatting
+          CLEANED_CREDS=$(echo '${{ steps.fetch-akeyless-secrets.outputs.PORT_CREDS }}' | tr -d '[:space:]')
+          
+          # Extract values with error checking
+          CLIENT_ID=$(echo "$CLEANED_CREDS" | jq -r '.client_id // empty')
+          CLIENT_SECRET=$(echo "$CLEANED_CREDS" | jq -r '.client_secret // empty')
+          
+          if [ -z "$CLIENT_ID" ] || [ -z "$CLIENT_SECRET" ]; then
+            echo "::error::Failed to parse client_id or client_secret from credentials"
+            exit 1
+          fi
+          
+          # Set environment variables
+          echo "PORT_CLIENT_ID=$CLIENT_ID" >> $GITHUB_ENV
+          echo "PORT_CLIENT_SECRET=$CLIENT_SECRET" >> $GITHUB_ENV
+          echo "PERSONAL_ACCESS_TOKEN=$ACTUAL_PAT" >> $GITHUB_ENV
+          
+          # Test PAT with a simple API call (with verbose output)
+          echo "Testing GitHub API access..."
+          HTTP_RESPONSE=$(curl -s -v \
+            -H "Authorization: Bearer $ACTUAL_PAT" \
+            https://api.github.com/user 2>&1)
+          HTTP_STATUS=$(echo "$HTTP_RESPONSE" | grep "< HTTP" | awk '{print $3}')
+          echo "GitHub API test status: $HTTP_STATUS"
+          echo "API Response Headers:"
+          echo "$HTTP_RESPONSE" | grep "< " || true
+          
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "::error::GitHub PAT validation failed with status $HTTP_STATUS"
+            exit 1
+          fi
+
+      - name: Export AWS Creds to Environment
+        run: |
+          echo '${{ steps.fetch-akeyless-secrets.outputs.aws_dynamic_secret }}' | jq -r 'to_entries|map("AWS_\(.key|ascii_upcase)=\(.value|tostring)")|.[]' >> $GITHUB_ENV
+
+      # Setup AWS CLI
+      - name: Configure AWS Credentials
+        run: |
+          # env | grep -i aws
+          aws configure set aws_access_key_id ${{ env.AWS_ACCESS_KEY_ID }}
+          aws configure set aws_secret_access_key ${{ env.AWS_SECRET_ACCESS_KEY }}
+          sleep 30 # Wait for AWS to assign IAM permissions to the credentials
+
+      - name: Login to AWS ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
 
       - name: Create a log message (post-action)
         uses: port-labs/port-github-action@v1
@@ -97,17 +175,6 @@ jobs:
           runId: ${{fromJson(inputs.port_payload).context.runId}}
           logMessage: "Creating ECR repository: ${{ github.event.inputs.repo_name }}"
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ env.AWS_REGION }}
-          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
-
-      - name: Login to AWS ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-
       - name: Create ECR Repository
         id: create-ecr-repo
         run: |
@@ -144,15 +211,16 @@ jobs:
         id: create-repo
         if: ${{ env.repo_exists == 'false' }}
         run: |
+          # Add quotes around the JSON data and escape the inner quotes
           HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
             -X POST \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${{ env.PERSONAL_ACCESS_TOKEN }}" \
-            -d '{"name": "${{ github.event.inputs.repo_name }}", "private": true, "description": "${{ github.event.inputs.description }}"}' \
+            -d "{\"name\": \"${{ github.event.inputs.repo_name }}\", \"private\": true, \"description\": \"${{ github.event.inputs.description }}\"}" \
             "https://api.github.com/user/repos")
-
+          
           echo "HTTP Status: $HTTP_STATUS"
-
+          
           if [ $HTTP_STATUS -eq 201 ]; then
             echo "Repository created successfully."
           else
