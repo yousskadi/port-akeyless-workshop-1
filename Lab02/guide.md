@@ -129,9 +129,10 @@ watch kubectl get pods -n akeyless
 ```
 Sample Output:
 ```
-NAME                                       READY   STATUS    RESTARTS   AGE
-gw-akeyless-api-gateway-6fdbbbfbb6-fmgzd   1/1     Running   0          9m37s
-gw-akeyless-api-gateway-6fdbbbfbb6-gl4n5   1/1     Running   0          9m37s
+NAME                            TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
+gw-akeyless-gateway             LoadBalancer   10.109.213.92   <pending>     8000:32161/TCP   6m8s
+gw-akeyless-gateway-cache-svc   ClusterIP      10.104.3.143    <none>        6379/TCP         6m8s
+gw-akeyless-gateway-internal    ClusterIP      10.98.4.168     <none>        8080/TCP         6m8s
 ```
 
 Hit `Ctrl+C` to stop
@@ -140,7 +141,7 @@ Hit `Ctrl+C` to stop
 
 First, open a new terminal in your codespace and run the following command:
 ```bash
-kubectl port-forward svc/gw-akeyless-api-gateway 8000:8000 -n akeyless
+kubectl port-forward svc/gw-akeyless-gateway 8000:8000 -n akeyless
 ```
 
 Then, in the codespace, click on the `PORTS` tab beside the `TERMINAL` tab and right click on port `8000` and change the `Port Visibility` to `Public`.

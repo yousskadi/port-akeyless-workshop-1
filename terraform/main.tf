@@ -77,6 +77,20 @@ module "eks" {
       desired_size = 1
     }
   }
+
+  manage_aws_auth_configmap = true
+  aws_auth_users = [
+    {
+      userarn  = data.aws_caller_identity.current.arn
+      username = data.aws_caller_identity.current.user_id
+      groups   = ["system:masters"]
+    },
+    {
+      userarn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:user/USERNAME"
+      username = "USERNAME"
+      groups   = ["system:masters"]
+    }
+  ]
 }
 
 # Add this data source to get the current AWS account ID
