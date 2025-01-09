@@ -118,6 +118,24 @@ helm upgrade --install gw akeyless/akeyless-api-gateway --namespace akeyless --s
 kubens akeyless
 ```
 
+
+```bash
+helm repo add akeyless https://akeylesslabs.github.io/helm-charts
+
+helm repo update
+
+kubectl create namespace akeyless
+
+yq -i ".globalConfig.gatewayAuth.gatewayAccessId = \"$(jq -r .access_id creds_api_key_auth.json)\"" values.yaml
+
+kubectl create secret generic access-key \
+  --from-literal=gateway-access-key=$(jq -r .access_key creds_api_key_auth.json)
+
+helm upgrade --install gw akeyless/akeyless-api-gateway --namespace akeyless -f values.yaml
+
+kubens akeyless
+```
+
 Check the gateway logs and wait until they stop:
 
 ```bash
