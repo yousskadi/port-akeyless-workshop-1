@@ -18,7 +18,15 @@ globalConfig:
   ## Name must be unique. Empty permissions will implicitly give the admin permission.
   ## See docs for examples https://docs.akeyless.io/docs/gateway-chart#gateway-admins
   ##
-  allowedAccessPermissions: {}
+  allowedAccessPermissions: 
+    - name: AdminsAPIkey
+      access_id: 
+      permissions:
+        - admin
+    - name: AdminsOIDC
+      access_id: p-j1ej0z1eudthim
+      permissions:
+        - admin
   ## Use a K8s existing secret for Gateway Allowed Access. Must include the following key: allowed-access-permissions
   ## https://docs.akeyless.io/docs/gateway-chart#access-permissions
   ##

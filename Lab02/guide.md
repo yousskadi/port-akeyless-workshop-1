@@ -108,29 +108,15 @@ The generated API key credentials will be used later for authentication with the
 
 ### 2.1 Create the Gateway
 
-Run the following commands in the `Terminal` of your GitHub codespace.
+Run the following script to get the values.yaml file ready for the Helm chart to deploy the gateway.
 
 ```bash
-helm repo add akeyless https://akeylesslabs.github.io/helm-charts
-helm repo update
-kubectl create namespace akeyless
-helm upgrade --install gw akeyless/akeyless-api-gateway --namespace akeyless --set akeylessUserAuth.adminAccessId=$(jq -r .access_id creds_api_key_auth.json)
-kubens akeyless
+Lab02/prepare_gateway_config.sh
 ```
 
+Then run the following commands in the `Terminal` of your GitHub codespace.
 
 ```bash
-helm repo add akeyless https://akeylesslabs.github.io/helm-charts
-
-helm repo update
-
-kubectl create namespace akeyless
-
-yq -i ".globalConfig.gatewayAuth.gatewayAccessId = \"$(jq -r .access_id creds_api_key_auth.json)\"" values.yaml
-
-kubectl create secret generic access-key \
-  --from-literal=gateway-access-key=$(jq -r .access_key creds_api_key_auth.json)
-
 helm upgrade --install gw akeyless/akeyless-api-gateway --namespace akeyless -f values.yaml
 
 kubens akeyless
