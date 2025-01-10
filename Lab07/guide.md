@@ -1,8 +1,8 @@
-# Cleanup
+# Destroy the EKS Cluster
 
 In this lab we will destroy the EKS cluster from within Port.
 
-- [Cleanup](#cleanup)
+- [Destroy the EKS Cluster](#destroy-the-eks-cluster)
   - [1. Create a self-service action in Port](#1-create-a-self-service-action-in-port)
   - [2. Run the self-service action](#2-run-the-self-service-action)
   - [3. Check the AWS Console \[Optional\]](#3-check-the-aws-console-optional)

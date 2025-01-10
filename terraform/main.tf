@@ -52,31 +52,31 @@ module "eks" {
     provider_key_arn = "arn:aws:kms:${var.region}:${data.aws_caller_identity.current.account_id}:alias/aws/eks"
   }
 
-  eks_managed_node_group_defaults = {
-    ami_type = "AL2_x86_64"
-  }
+  # eks_managed_node_group_defaults = {
+  #   ami_type = "AL2_x86_64"
+  # }
 
-  eks_managed_node_groups = {
-    one = {
-      name = "node-group-1"
+  # eks_managed_node_groups = {
+  #   one = {
+  #     name = "node-group-1"
 
-      instance_types = ["t3.small"]
+  #     instance_types = ["t3.small"]
 
-      min_size     = 1
-      max_size     = 3
-      desired_size = 2
-    }
+  #     min_size     = 1
+  #     max_size     = 3
+  #     desired_size = 2
+  #   }
 
-    two = {
-      name = "node-group-2"
+  #   two = {
+  #     name = "node-group-2"
 
-      instance_types = ["t3.small"]
+  #     instance_types = ["t3.small"]
 
-      min_size     = 1
-      max_size     = 2
-      desired_size = 1
-    }
-  }
+  #     min_size     = 1
+  #     max_size     = 2
+  #     desired_size = 1
+  #   }
+  # }
 
   # Only manage existing aws-auth ConfigMap, don't try to create it
   create_aws_auth_configmap = false
@@ -104,27 +104,27 @@ data "aws_iam_policy" "ebs_csi_policy" {
   arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
 }
 
-module "irsa-ebs-csi" {
-  source  = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc"
-  version = "4.7.0"
+# module "irsa-ebs-csi" {
+#   source  = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc"
+#   version = "4.7.0"
 
-  create_role                   = true
-  role_name                     = "AmazonEKSTFEBSCSIRole-${module.eks.cluster_name}"
-  provider_url                  = module.eks.oidc_provider
-  role_policy_arns              = [data.aws_iam_policy.ebs_csi_policy.arn]
-  oidc_fully_qualified_subjects = ["system:serviceaccount:kube-system:ebs-csi-controller-sa"]
-}
+#   create_role                   = true
+#   role_name                     = "AmazonEKSTFEBSCSIRole-${module.eks.cluster_name}"
+#   provider_url                  = module.eks.oidc_provider
+#   role_policy_arns              = [data.aws_iam_policy.ebs_csi_policy.arn]
+#   oidc_fully_qualified_subjects = ["system:serviceaccount:kube-system:ebs-csi-controller-sa"]
+# }
 
-resource "aws_eks_addon" "ebs-csi" {
-  cluster_name             = module.eks.cluster_name
-  addon_name               = "aws-ebs-csi-driver"
-  addon_version            = "v1.38.1-eksbuild.1"
-  service_account_role_arn = module.irsa-ebs-csi.iam_role_arn
-  tags = {
-    "eks_addon" = "ebs-csi"
-    "terraform" = "true"
-  }
-}
+# resource "aws_eks_addon" "ebs-csi" {
+#   cluster_name             = module.eks.cluster_name
+#   addon_name               = "aws-ebs-csi-driver"
+#   addon_version            = "v1.38.1-eksbuild.1"
+#   service_account_role_arn = module.irsa-ebs-csi.iam_role_arn
+#   tags = {
+#     "eks_addon" = "ebs-csi"
+#     "terraform" = "true"
+#   }
+# }
 
 
 # Port resources

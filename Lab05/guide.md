@@ -1,4 +1,4 @@
-# Build the EKS Cluster from Port
+# Build the EKS Cluster
 
 In this lab we will build the EKS cluster from Port.
 
@@ -6,7 +6,7 @@ In this lab we will build the EKS cluster from Port.
 
 <!-- code_chunk_output -->
 
-- [Build the EKS Cluster from Port](#build-the-eks-cluster-from-port)
+- [Build the EKS Cluster](#build-the-eks-cluster)
   - [1. Add IAM Users to the AWS Auth ConfigMap](#1-add-iam-users-to-the-aws-auth-configmap)
   - [2. Commit and Push the Changes](#2-commit-and-push-the-changes)
   - [3. Create an EKS Cluster](#3-create-an-eks-cluster)

@@ -1,8 +1,8 @@
-# Deploy an App
+# Deploy a Nodejs App
 
 In this lab we will deploy an app to the EKS cluster from within Port.
 
-- [Deploy an App](#deploy-an-app)
+- [Deploy a Nodejs App](#deploy-a-nodejs-app)
   - [1. Add GitHub Personal Access Token credentials to Akeyless](#1-add-github-personal-access-token-credentials-to-akeyless)
   - [2. Prepare to Scaffold a Nodejs App](#2-prepare-to-scaffold-a-nodejs-app)
   - [3. Run the self-service action](#3-run-the-self-service-action)
