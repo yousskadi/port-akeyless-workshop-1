@@ -20,7 +20,7 @@ Table of Contents:
   - [2. Create a Gateway in Akeyless](#2-create-a-gateway-in-akeyless)
     - [2.1 Create the Gateway](#21-create-the-gateway)
     - [2.2 Expose the Gateway Port 8000](#22-expose-the-gateway-port-8000)
-    - [2.3 Give Permission](#23-give-permission)
+    - [2.3 Login to the Gateway](#23-login-to-the-gateway)
     - [2.4 Check the Gateway from the Akeyless Console](#24-check-the-gateway-from-the-akeyless-console)
   - [3. Create a Target, Rotated Secret, and Dynamic Secret in Akeyless](#3-create-a-target-rotated-secret-and-dynamic-secret-in-akeyless)
 
@@ -35,10 +35,9 @@ Go to https://console.akeyless.io and click on `OIDC` and NOT `GitHub` under the
 
 ### 1.2 Login to Akeyless CLI via OIDC
 
-Open a new terminal in your codespace and run the following commands (don't worry if you get an error like this when running `akeyless --init`: `ERR! undefined option --init`) this is expected since we have already initialized the CLI in the previous lab:
+Open a new terminal in your codespace and run the following command:
 
 ```bash
-akeyless --init
 akeyless auth --access-id=p-j1ej0z1eudthim --access-type=oidc --use-remote-browser
 ```
 
@@ -129,10 +128,10 @@ watch kubectl get pods -n akeyless
 ```
 Sample Output:
 ```
-NAME                            TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
-gw-akeyless-gateway             LoadBalancer   10.109.213.92   <pending>     8000:32161/TCP   6m8s
-gw-akeyless-gateway-cache-svc   ClusterIP      10.104.3.143    <none>        6379/TCP         6m8s
-gw-akeyless-gateway-internal    ClusterIP      10.98.4.168     <none>        8080/TCP         6m8s
+NAME                                         READY   STATUS    RESTARTS   AGE
+gw-akeyless-gateway-6cdf879645-77xjf         1/1     Running   0          119s
+gw-akeyless-gateway-6cdf879645-kz8fb         1/1     Running   0          119s
+gw-akeyless-gateway-cache-75c68d5d9d-ff4wz   1/1     Running   0          119s
 ```
 
 Hit `Ctrl+C` to stop
@@ -147,7 +146,7 @@ kubectl port-forward svc/gw-akeyless-gateway 8000:8000 -n akeyless
 Then, in the codespace, click on the `PORTS` tab beside the `TERMINAL` tab and right click on port `8000` and change the `Port Visibility` to `Public`.
 ![alt text](../images/port_visibility_public.png)
 
-### 2.3 Give Permission
+### 2.3 Login to the Gateway
 
 Login to the Gateway from your browser by clicking on the `PORTS` tab beside the `TERMINAL` tab and click the globe icon to open in a browser for port `8000`. 
 ![alt text](../images/port_open_gwy.png)
@@ -162,17 +161,9 @@ Login using your API key credentials found in the `creds_api_key_auth.json` file
 
 ![alt text](../images/gwy_view.png)
 
-Click on `Access Permissions` then on the `New` button.
-
-Give it a name `APIkey` and choose the `/Workshops/Akeyless-Port-1/<your-github-username>/APIkey` Auth method then click `Next.` Leave `Admin` selected and then click `Finish`.
+Click on `Access Permissions` to view the permissions for the gateway created by helm.
 
 ![alt text](../images/gwy-access-permissions.png)
-
-Add another permission for the OIDC auth method: `/Workshops/TeKanAid Academy GitHub`
-
-![alt text](../images/gwy-oidc-permissions.png)
-
-then click `Next.` Leave `Admin` selected and then click `Finish`.
 
 ### 2.4 Check the Gateway from the Akeyless Console
 
