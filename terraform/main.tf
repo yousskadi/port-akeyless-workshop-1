@@ -78,7 +78,10 @@ module "eks" {
     }
   }
 
+  # Enable both creation and management of the aws-auth ConfigMap
+  create_aws_auth_configmap = true
   manage_aws_auth_configmap = true
+
   aws_auth_users = [
     {
       userarn  = data.aws_caller_identity.current.arn
@@ -147,4 +150,13 @@ resource "port_entity" "eks_cluster" {
   depends_on = [module.eks.cluster_name]
 }
 
+provider "kubernetes" {
+  host                   = module.eks.cluster_endpoint
+  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
 
+  exec {
+    api_version = "client.authentication.k8s.io/v1beta1"
+    command     = "aws"
+    args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
+  }
+}
