@@ -38,7 +38,7 @@ git push
 
 ## 3. Create an EKS Cluster
 
-Go to the self-service page and click on the `Create` button under the `Create an EKS Cluster` action. Give it a short name and select the us-east-1 region then click `Execute`.
+Go to the self-service page and click on the `Create` button under the `Create an EKS Cluster` action. Give it a short name (otherwise EKS may complain) and select the us-east-1 region then click `Execute`.
 
 ![alt text](../images/port-create-eks-cluster-execute.png)
 
@@ -68,34 +68,45 @@ To get the kubeconfig for the cluster, run the command below replacing <your-eks
 
 ![alt text](../images/port-eks-cluster-catalog-2.png)
 
-Run the following script:
-
+Run the following command:
 
 ```bash
-akeyless configure --profile default --access-id "$(jq -r .access_id creds_api_key_auth.json)" --access-key "$(jq -r .access_key creds_api_key_auth.json)"
-AWS_CREDS=$(akeyless dynamic-secret get-value --name '/Workshops/Akeyless-Port-1/AWS-Dynamic')
-echo AWS_CREDS: $AWS_CREDS
-echo "AWS_ACCESS_KEY_ID=$(echo $AWS_CREDS | jq -r '.access_key_id')" >> $GITHUB_ENV
-echo "AWS_SECRET_ACCESS_KEY=$(echo $AWS_CREDS | jq -r '.secret_access_key')" >> $GITHUB_ENV
 aws eks update-kubeconfig --region us-east-1 --name <your-eks-cluster-name>
 ```
 
-> Note: If after you run the pipeline and find that you get an error accessing the cluster, it could be that you need to refresh the AWS credentials you're using, that is if you are using the ones provided by TeKanAid Academy. You can refresh them by running the command: `Lab01/start.sh` again.
+> Note: If after you run the pipeline and find that you get an error accessing the cluster, it could be that you need to refresh the AWS credentials you're using, that is if you are using the ones provided by TeKanAid Academy. You can refresh them by running the command: `Lab01/start.sh` again. You will also need to update the AWS credentials in the `terraform/main.tf` file.
 
 You can now use `kubectl` to access the cluster.
 
 Below are some suggested commands for you to run.
 
 ```bash
-@tekanaid ➜ /workspaces/akeyless-workshop-1/terraform (main) $ kubens
+kubens # alias for kubectl get namespaces
+```
+
+Output:
+```
 default
 kube-node-lease
 kube-public
 kube-system
-@tekanaid ➜ /workspaces/akeyless-workshop-1/terraform (main) $ kubens kube-system
+```
+
+```bash
+kubens kube-system # to switch to the kube-system namespace
+```
+
+Output:
+```
 Context "arn:aws:eks:us-east-1:047709130171:cluster/workshop-1-AYEsefOJ" modified.
 Active namespace is "kube-system".
-@tekanaid ➜ /workspaces/akeyless-workshop-1/terraform (main) $ kga
+
+```bash
+kga # alias for kubectl get all
+```
+
+Output:
+```
 NAME                                      READY   STATUS    RESTARTS   AGE
 pod/aws-node-p9sc2                        2/2     Running   0          21m
 pod/aws-node-pd6f6                        2/2     Running   0          21m
