@@ -62,6 +62,11 @@ jobs:
             exit 1
           fi
 
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: "1.5.7"
+
       - name: Put Port Credentials into Environment Variables
         run: |
           if [ -z "${{ steps.fetch-akeyless-secrets.outputs.PORT_CREDS }}" ]; then
