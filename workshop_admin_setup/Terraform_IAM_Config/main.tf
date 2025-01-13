@@ -139,6 +139,7 @@ resource "aws_iam_policy" "eks_for_workshops" {
         "Effect" : "Allow",
         "Action" : [
           "eks:*",
+          "ecr:*",
           "kms:*",
           "logs:*",
           "iam:CreateOpenIDConnectProvider",
@@ -352,6 +353,11 @@ resource "aws_iam_role" "github_actions_role" {
 # Add necessary permissions to the role
 resource "aws_iam_role_policy_attachment" "github_actions_eks_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+  role       = aws_iam_role.github_actions_role.name
+}
+
+resource "aws_iam_role_policy_attachment" "github_actions_eks_policy_2" {
+  policy_arn = "arn:aws:iam::047709130171:policy/EKS_for_Workshops"
   role       = aws_iam_role.github_actions_role.name
 }
 

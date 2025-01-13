@@ -40,6 +40,11 @@ locals {
         username: github-actions
         groups:
           - system:masters
+      - rolearn: ${module.eks.eks_managed_node_groups["one"].iam_role_arn}
+        username: system:node:{{EC2PrivateDNSName}}
+        groups:
+          - system:bootstrappers
+          - system:nodes
   EOT
 }
 
