@@ -197,4 +197,7 @@ YAML
 
   depends_on = [module.eks]
 
+  lifecycle {
+    ignore_changes = all
+  }
 }

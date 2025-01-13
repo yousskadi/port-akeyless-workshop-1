@@ -138,7 +138,9 @@ jobs:
 
       - name: Terraform Destroy
         if: ${{ github.event.inputs.action == 'destroy' }}
-        run: terraform destroy -auto-approve
+        run: |
+          terraform state rm kubectl_manifest.aws_auth 
+          terraform destroy -auto-approve
         env:
           TF_VAR_cluster_name: ${{ fromJson(inputs.port_payload).payload.entity.properties.name }}
           TF_VAR_region: ${{ github.event.inputs.region }}
