@@ -30,20 +30,14 @@ data "aws_availability_zones" "available" {
 
 locals {
   cluster_name = var.cluster_name == "" ? "education-eks-${random_string.suffix.result}" : var.cluster_name
-    # Creating the AWS-AUTH
+  # Creating the AWS-AUTH ConfigMap
+  # The role below is the role that the GitHub Actions workflow will assume and was created in the workshop_admin_setup/Terraform_IAM_Config/main.tf file. 
+  # This allows any just in time credentianals created by akeyless to be used to access the EKS cluster.
   aws_auth_configmap_yaml = <<-EOT
   data:
-    mapUsers: |
-      - userarn: "${data.aws_caller_identity.current.arn}"
-        username: "${data.aws_caller_identity.current.user_id}"
-        groups:
-          - system:masters
-      - userarn: "arn:aws:iam::${data.aws_caller_identity.current.account_id}:user/tmp.sam.gabrail@tekanaid.com.xsZP8"
-        username: "tmp.sam.gabrail@tekanaid.com.xsZP8"
-        groups:
-          - system:masters
-      - userarn: "arn:aws:iam::${data.aws_caller_identity.current.account_id}:user/sam"
-        username: "sam"
+    mapRoles: |
+      - rolearn: arn:aws:iam::047709130171:role/github-actions-eks-role
+        username: github-actions
         groups:
           - system:masters
   EOT
@@ -84,15 +78,15 @@ module "eks" {
       desired_size = 2
     }
 
-    two = {
-      name = "node-group-2"
+    # two = {
+    #   name = "node-group-2"
 
-      instance_types = ["t3.small"]
+    #   instance_types = ["t3.small"]
 
-      min_size     = 1
-      max_size     = 2
-      desired_size = 1
-    }
+    #   min_size     = 1
+    #   max_size     = 2
+    #   desired_size = 1
+    # }
   }
 
   # Only manage existing aws-auth ConfigMap, don't try to create it
@@ -127,27 +121,27 @@ data "aws_iam_policy" "ebs_csi_policy" {
   arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
 }
 
-module "irsa-ebs-csi" {
-  source  = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc"
-  version = "4.7.0"
+# module "irsa-ebs-csi" {
+#   source  = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc"
+#   version = "4.7.0"
 
-  create_role                   = true
-  role_name                     = "AmazonEKSTFEBSCSIRole-${module.eks.cluster_name}"
-  provider_url                  = module.eks.oidc_provider
-  role_policy_arns              = [data.aws_iam_policy.ebs_csi_policy.arn]
-  oidc_fully_qualified_subjects = ["system:serviceaccount:kube-system:ebs-csi-controller-sa"]
-}
+#   create_role                   = true
+#   role_name                     = "AmazonEKSTFEBSCSIRole-${module.eks.cluster_name}"
+#   provider_url                  = module.eks.oidc_provider
+#   role_policy_arns              = [data.aws_iam_policy.ebs_csi_policy.arn]
+#   oidc_fully_qualified_subjects = ["system:serviceaccount:kube-system:ebs-csi-controller-sa"]
+# }
 
-resource "aws_eks_addon" "ebs-csi" {
-  cluster_name             = module.eks.cluster_name
-  addon_name               = "aws-ebs-csi-driver"
-  addon_version            = "v1.38.1-eksbuild.1"
-  service_account_role_arn = module.irsa-ebs-csi.iam_role_arn
-  tags = {
-    "eks_addon" = "ebs-csi"
-    "terraform" = "true"
-  }
-}
+# resource "aws_eks_addon" "ebs-csi" {
+#   cluster_name             = module.eks.cluster_name
+#   addon_name               = "aws-ebs-csi-driver"
+#   addon_version            = "v1.38.1-eksbuild.1"
+#   service_account_role_arn = module.irsa-ebs-csi.iam_role_arn
+#   tags = {
+#     "eks_addon" = "ebs-csi"
+#     "terraform" = "true"
+#   }
+# }
 
 # Port resources
 resource "port_entity" "eks_cluster" {

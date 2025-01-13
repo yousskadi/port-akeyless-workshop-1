@@ -19,6 +19,8 @@ provider "aws" {
   region = "us-east-1"
 }
 
+data "aws_caller_identity" "current" {}
+
 import {
   to = aws_iam_policy.akeyless_access_for_dynamic_secrets
   id = "arn:aws:iam::047709130171:policy/Akeyless_Access_for_Dynamic_Secrets"
@@ -74,13 +76,13 @@ resource "aws_iam_policy" "akeyless_access_for_dynamic_secrets" {
   description = "Policy to allow Akeyless to generate AWS dynamic secrets in iam_user mode"
   name        = "Akeyless_Access_for_Dynamic_Secrets"
   path        = "/"
-  policy      = jsonencode({
-    "Version": "2012-10-17",
-    "Statement": [
+  policy = jsonencode({
+    "Version" : "2012-10-17",
+    "Statement" : [
       {
-        "Sid": "VisualEditor0",
-        "Effect": "Allow",
-        "Action": [
+        "Sid" : "VisualEditor0",
+        "Effect" : "Allow",
+        "Action" : [
           "iam:DeleteAccessKey",
           "iam:DeletePolicy",
           "iam:AttachRolePolicy",
@@ -119,7 +121,7 @@ resource "aws_iam_policy" "akeyless_access_for_dynamic_secrets" {
           "iam:GetLoginProfile",
           "iam:ListUserTags"
         ],
-        "Resource": "*"
+        "Resource" : "*"
       }
     ]
   })
@@ -129,13 +131,13 @@ resource "aws_iam_policy" "eks_for_workshops" {
   description = null
   name        = "EKS_for_Workshops"
   path        = "/"
-  policy      = jsonencode({
-    "Version": "2012-10-17",
-    "Statement": [
+  policy = jsonencode({
+    "Version" : "2012-10-17",
+    "Statement" : [
       {
-        "Sid": "VisualEditor0",
-        "Effect": "Allow",
-        "Action": [
+        "Sid" : "VisualEditor0",
+        "Effect" : "Allow",
+        "Action" : [
           "eks:*",
           "kms:*",
           "logs:*",
@@ -223,29 +225,29 @@ resource "aws_iam_policy" "eks_for_workshops" {
           "iam:ListUserTags",
           "iam:CreatePolicyVersion"
         ],
-        "Resource": "*"
+        "Resource" : "*"
       },
       {
-        "Effect": "Allow",
-        "Action": [
+        "Effect" : "Allow",
+        "Action" : [
           "ec2:*"
         ],
-        "Resource": [
+        "Resource" : [
           "arn:aws:ec2:us-east-1:047709130171:*"
         ]
       },
       {
-        "Sid": "Statement1",
-        "Effect": "Allow",
-        "Action": "iam:PassRole",
-        "Resource": [
+        "Sid" : "Statement1",
+        "Effect" : "Allow",
+        "Action" : "iam:PassRole",
+        "Resource" : [
           "arn:aws:iam::047709130171:role/*"
         ]
       },
       {
-        "Effect": "Allow",
-        "Action": "iam:CreatePolicyVersion",
-        "Resource": "arn:aws:iam::047709130171:policy/*"
+        "Effect" : "Allow",
+        "Action" : "iam:CreatePolicyVersion",
+        "Resource" : "arn:aws:iam::047709130171:policy/*"
       }
     ]
   })
@@ -256,33 +258,33 @@ resource "aws_iam_policy" "S3-DynamoDB-for-Terraform-Backend" {
   description = "This policy allows actions by Terraform for storing state in S3 and locking for DynamoDB"
   name        = "S3-DynamoDB-for-Terraform-Backend"
   path        = "/"
-  policy      = jsonencode({
-    "Version": "2012-10-17",
-    "Statement": [
+  policy = jsonencode({
+    "Version" : "2012-10-17",
+    "Statement" : [
       {
-        "Effect": "Allow",
-        "Action": [
+        "Effect" : "Allow",
+        "Action" : [
           "s3:CreateBucket",
           "s3:ListBucket",
           "s3:GetObject",
           "s3:PutObject",
           "s3:DeleteObject"
         ],
-        "Resource": [
+        "Resource" : [
           "arn:aws:s3:::tekanaid-terraform-state-workshop",
           "arn:aws:s3:::tekanaid-terraform-state-workshop/*"
         ]
       },
       {
-        "Effect": "Allow",
-        "Action": [
+        "Effect" : "Allow",
+        "Action" : [
           "dynamodb:PutItem",
           "dynamodb:GetItem",
           "dynamodb:DeleteItem",
           "dynamodb:UpdateItem",
           "dynamodb:DescribeTable"
         ],
-        "Resource": "arn:aws:dynamodb:us-east-1:047709130171:table/terraform-state"
+        "Resource" : "arn:aws:dynamodb:us-east-1:047709130171:table/terraform-state"
       }
     ]
   })
@@ -327,4 +329,50 @@ resource "aws_iam_user" "akeyless" {
 resource "aws_iam_user_policy_attachment" "akeyless" {
   policy_arn = "arn:aws:iam::047709130171:policy/Akeyless_Access_for_Dynamic_Secrets"
   user       = "akeyless"
+}
+
+# Create IAM role for GitHub Actions
+resource "aws_iam_role" "github_actions_role" {
+  name = "github-actions-eks-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+        }
+      }
+    ]
+  })
+}
+
+# Add necessary permissions to the role
+resource "aws_iam_role_policy_attachment" "github_actions_eks_policy" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+  role       = aws_iam_role.github_actions_role.name
+}
+
+
+resource "aws_iam_policy" "assume_github_actions_role" {
+  name        = "AssumeGitHubActionsRole"
+  description = "Policy to allow assuming the GitHub Actions role for EKS access"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = "sts:AssumeRole"
+        Resource = aws_iam_role.github_actions_role.arn
+      }
+    ]
+  })
+}
+
+resource "aws_iam_group_policy_attachment" "assume_github_actions_role" {
+  group      = "Akeyless-Workshops"
+  policy_arn = aws_iam_policy.assume_github_actions_role.arn
 }

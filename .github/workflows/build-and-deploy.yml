@@ -23,6 +23,7 @@ jobs:
       TRIGGERED_BY: ${{ fromJson(inputs.port_payload).trigger.by.user.email || github.actor }}
       AKEYLESS_ACCESS_ID: ${{ secrets.AKEYLESS_ACCESS_ID }}
       AWS_REGION: us-east-1
+      GITHUB_ACTIONS_ROLE_ARN: "arn:aws:iam::047709130171:role/github-actions-eks-role"
 
     steps:
     - name: Extract repository owner and name
@@ -80,6 +81,8 @@ jobs:
         aws-region: ${{ env.AWS_REGION }}
         aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+        role-to-assume: ${{ env.GITHUB_ACTIONS_ROLE_ARN }}
+        role-duration-seconds: 900
 
     - name: Login to AWS ECR
       id: login-ecr
@@ -140,7 +143,7 @@ jobs:
 
     - name: Deploy to EKS
       run: |
-        aws eks update-kubeconfig --name ${{ env.CLUSTER_NAME }} --region ${{ env.CLUSTER_REGION }}
+        aws eks update-kubeconfig --name ${{ env.CLUSTER_NAME }} --region ${{ env.CLUSTER_REGION }} --role-arn ${{ env.GITHUB_ACTIONS_ROLE_ARN }}
         kubectl apply -f manifests/deployment.yml
         kubectl apply -f manifests/service.yml
 

@@ -71,7 +71,7 @@ To get the kubeconfig for the cluster, run the command below replacing <your-eks
 Run the following command:
 
 ```bash
-aws eks update-kubeconfig --region us-east-1 --name <your-eks-cluster-name>
+aws eks update-kubeconfig --region us-east-1 --role-arn arn:aws:iam::047709130171:role/github-actions-eks-role --name <your-eks-cluster-name>
 ```
 
 > Note: If after you run the pipeline and find that you get an error accessing the cluster, it could be that you need to refresh the AWS credentials you're using, that is if you are using the ones provided by TeKanAid Academy. You can refresh them by running the command: `Lab01/start.sh` again. You will also need to update the AWS credentials in the `terraform/main.tf` file.
