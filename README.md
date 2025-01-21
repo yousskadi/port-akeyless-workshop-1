@@ -72,7 +72,7 @@ This workshop guides participants through deploying applications on Amazon EKS u
 ## Getting Started
 Begin with [Lab 1: Environment Setup](Lab01/guide.md) to start your journey through the workshop.
 
-## If Your Codespace Times Out
+## If Your Codespace Times Out (THIS SHOULD NOT HAPPEN BUT JUST IN CASE)
 If your codespace times out or needs to be restarted, follow these steps:
 
 ### 1. Run the keep alive command
