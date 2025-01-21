@@ -32,6 +32,6 @@ You will see that the action is in progress and will trigger a GitHub Actions wo
 ![alt text](../images/github-actions-destroy.png)
 ## 3. Check the AWS Console [Optional]
 
-Wait about 25 minutes or so and if you wish, you could log into the AWS console and see your EKS cluster is removed.
+Wait about 15 minutes or so and if you wish, you could log into the AWS console and see your EKS cluster is removed.
 
 > You've reached the end of the lab.
