@@ -98,37 +98,27 @@ kga # alias for kubectl get all
 
 Output:
 ```
-NAME                                      READY   STATUS    RESTARTS   AGE
-pod/aws-node-p9sc2                        2/2     Running   0          21m
-pod/aws-node-pd6f6                        2/2     Running   0          21m
-pod/aws-node-tltng                        2/2     Running   0          21m
-pod/coredns-54d6f577c6-s6xfm              1/1     Running   0          44m
-pod/coredns-54d6f577c6-x29rp              1/1     Running   0          44m
-pod/ebs-csi-controller-7bb6f55486-25kx2   6/6     Running   0          22m
-pod/ebs-csi-controller-7bb6f55486-g85fd   6/6     Running   0          22m
-pod/ebs-csi-node-942jx                    3/3     Running   0          21m
-pod/ebs-csi-node-vlvf6                    3/3     Running   0          21m
-pod/ebs-csi-node-wsqlk                    3/3     Running   0          21m
-pod/kube-proxy-brcvz                      1/1     Running   0          21m
-pod/kube-proxy-qtdn5                      1/1     Running   0          21m
-pod/kube-proxy-twhjb                      1/1     Running   0          21m
+NAME                           READY   STATUS    RESTARTS   AGE
+pod/aws-node-pt7dj             2/2     Running   0          99s
+pod/aws-node-t8m4c             2/2     Running   0          97s
+pod/coredns-789f8477df-c9t94   1/1     Running   0          5m50s
+pod/coredns-789f8477df-qcdzl   1/1     Running   0          5m50s
+pod/kube-proxy-7fvrx           1/1     Running   0          97s
+pod/kube-proxy-jjs7j           1/1     Running   0          99s
 
-NAME               TYPE        CLUSTER-IP    EXTERNAL-IP   PORT(S)                  AGE
-service/kube-dns   ClusterIP   172.20.0.10   <none>        53/UDP,53/TCP,9153/TCP   44m
+NAME                                TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)                  AGE
+service/eks-extension-metrics-api   ClusterIP   172.20.205.255   <none>        443/TCP                  7m54s
+service/kube-dns                    ClusterIP   172.20.0.10      <none>        53/UDP,53/TCP,9153/TCP   5m51s
 
-NAME                                  DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR              AGE
-daemonset.apps/aws-node               3         3         3       3            3           <none>                     44m
-daemonset.apps/ebs-csi-node           3         3         3       3            3           kubernetes.io/os=linux     22m
-daemonset.apps/ebs-csi-node-windows   0         0         0       0            0           kubernetes.io/os=windows   22m
-daemonset.apps/kube-proxy             3         3         3       3            3           <none>                     44m
+NAME                        DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR   AGE
+daemonset.apps/aws-node     2         2         2       2            2           <none>          5m50s
+daemonset.apps/kube-proxy   2         2         2       2            2           <none>          5m51s
 
-NAME                                 READY   UP-TO-DATE   AVAILABLE   AGE
-deployment.apps/coredns              2/2     2            2           44m
-deployment.apps/ebs-csi-controller   2/2     2            2           22m
+NAME                      READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/coredns   2/2     2            2           5m51s
 
-NAME                                            DESIRED   CURRENT   READY   AGE
-replicaset.apps/coredns-54d6f577c6              2         2         2       44m
-replicaset.apps/ebs-csi-controller-7bb6f55486   2         2         2       22m
+NAME                                 DESIRED   CURRENT   READY   AGE
+replicaset.apps/coredns-789f8477df   2         2         2       5m51s
 ```
 
 > You've reached the end of the lab.
