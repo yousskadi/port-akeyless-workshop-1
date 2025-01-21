@@ -140,16 +140,13 @@ Congratulations! You've successfully deployed an app to the EKS cluster using Po
 Run the following commands to delete the app:
 
 ```bash
-kubectl delete deployment <your-app-name>-deployment
-kubectl delete service <your-app-name>-service
+kubectl delete deployment --all -n default
+kubectl get svc -n default --no-headers | grep -v kubernetes | awk '{print $1}' | xargs kubectl delete service
 ```
 
-For example, in my case it would be:
-
-```bash
-kubectl delete deployment mynodeapp-deployment
-kubectl delete service mynodeapp-service
-```
+These commands:
+- Delete all deployments in the default namespace
+- Delete all services EXCEPT the kubernetes service
 
 > You've reached the end of the lab.
 
