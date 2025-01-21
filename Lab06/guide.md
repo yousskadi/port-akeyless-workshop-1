@@ -8,6 +8,7 @@ In this lab we will deploy an app to the EKS cluster from within Port.
   - [3. Run the self-service action](#3-run-the-self-service-action)
   - [4. Deploy the app to the EKS cluster](#4-deploy-the-app-to-the-eks-cluster)
   - [5. Check the app](#5-check-the-app)
+  - [6. Delete the app](#6-delete-the-app)
 
 ## 1. Add GitHub Personal Access Token credentials to Akeyless
 
@@ -133,6 +134,22 @@ After waiting a couple of minutes, you can open a new browser tab and navigate t
 ![alt text](../images/port-eks-app-running.png)
 
 Congratulations! You've successfully deployed an app to the EKS cluster using Port and Akeyless!
+
+## 6. Delete the app
+
+Run the following commands to delete the app:
+
+```bash
+kubectl delete deployment <your-app-name>-deployment
+kubectl delete service <your-app-name>-service
+```
+
+For example, in my case it would be:
+
+```bash
+kubectl delete deployment mynodeapp-deployment
+kubectl delete service mynodeapp-service
+```
 
 > You've reached the end of the lab.
 
