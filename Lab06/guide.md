@@ -126,7 +126,9 @@ NAME                                              DESIRED   CURRENT   READY   AG
 replicaset.apps/mynodeapp-deployment-7cdb766dbc   3         3         3       35m
 ```
 
-Now you see how the app is running in the cluster. You can open a new browser tab and navigate to the LoadBalancer service's URL to access the app. In my case it was: http://a8e7f04292d3546cb8b64205606d9c10-67743035.us-east-1.elb.amazonaws.com
+Now you see how the app is running in the cluster. 
+
+After waiting a couple of minutes, you can open a new browser tab and navigate to the LoadBalancer service's URL to access the app. In my case it was: http://a8e7f04292d3546cb8b64205606d9c10-67743035.us-east-1.elb.amazonaws.com
 
 ![alt text](../images/port-eks-app-running.png)
 
