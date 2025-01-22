@@ -61,7 +61,7 @@ This action will create the following:
 
 Click on the action you just created using the `nodejs` template and click `Execute`.
 
-> Note: for the Repository Name: don't use underscores as the app will fail to deploy since K8s does not allow that. Just use something like mynodeapp
+> Note: for the Repository Name: don't use underscores as the app will fail to deploy since K8s does not allow that. Just use something like `mynodeapptekanaid` with a unique identifier like your name or github username.
 
 ![alt text](../images/port-scaffold-app.png)
 
