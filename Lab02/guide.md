@@ -155,7 +155,7 @@ Approve the access to this port.
 
 ![alt text](../images/approve_port_access.png)
 
-Login using your API key credentials found in the `creds_api_key_auth.json` file in Lab03.
+Login using your API key credentials found in the `creds_api_key_auth.json` file in the root of the repository.
 
 ![alt text](../images/gwy-sign-in.png)
 
