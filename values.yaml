@@ -7,7 +7,7 @@ globalConfig:
     ## If using access_key, certificate or universal identity, you must also add gatewayCredentialsExistingSecret which includes the key/certificate/token
     ## https://docs.akeyless.io/docs/gateway-chart#authentication
     ##
-    gatewayAccessId: ""
+    gatewayAccessId: "p-fjn9ihybd914am"
     gatewayAccessType: access_key
     ## Use K8s secret to set the following types: access_key, certificate, uid
     ## Create a K8s secret, run 'kubect apply' and add secret name (see docs for examples)
@@ -18,9 +18,9 @@ globalConfig:
   ## Name must be unique. Empty permissions will implicitly give the admin permission.
   ## See docs for examples https://docs.akeyless.io/docs/gateway-chart#gateway-admins
   ##
-  allowedAccessPermissions: 
+  allowedAccessPermissions:
     - name: AdminsAPIkey
-      access_id: 
+      access_id: p-fjn9ihybd914am
       permissions:
         - admin
     - name: AdminsOIDC
@@ -50,10 +50,10 @@ globalConfig:
     annotations:
   ## This is the actual name of the cluster as in account/access-id/clusterName
   ##
-  clusterName:
+  clusterName: yousskadi
   ## This is the vanity display name of the cluster
   ##
-  initialClusterDisplayName:
+  initialClusterDisplayName: yousskadi
   ## The key which is used to encrypt the Gateway configuration.
   ## If left empty - the account’s default key will be used.
   ## This key can be determined on cluster bringup only and cannot be modified afterwards
